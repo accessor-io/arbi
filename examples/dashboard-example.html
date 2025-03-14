@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard with Debugger</title>
+  
+  <!-- Include the debugger CSS -->
+  <link rel="stylesheet" href="../src/debugger/debugger.css">
+  
+  <!-- Your dashboard styles -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      padding: 20px;
+    }
+    
+    .widget {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 15px;
+      min-height: 200px;
+    }
+    
+    .widget h2 {
+      margin-top: 0;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+      font-size: 16px;
+    }
+    
+    header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .actions button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .actions button:hover {
+      background-color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>My Dashboard</h1>
+    <div class="actions">
+      <button id="refresh-btn">Refresh Data</button>
+      <button id="error-btn">Simulate Error</button>
+    </div>
+  </header>
+  
+  <div class="dashboard">
+    <div class="widget">
+      <h2>User Statistics</h2>
+      <div id="user-stats">Loading...</div>
+    </div>
+    
+    <div class="widget">
+      <h2>Revenue Overview</h2>
+      <div id="revenue-data">Loading...</div>
+    </div>
+    
+    <div class="widget">
+      <h2>Recent Activities</h2>
+      <div id="activities">Loading...</div>
+    </div>
+    
+    <div class="widget">
+      <h2>System Status</h2>
+      <div id="system-status">Loading...</div>
+    </div>
+  </div>
+  
+  <!-- Load the debugger script -->
+  <script type="module" src="../src/debugger/debugger.js"></script>
+  
+  <!-- Load your dashboard integration script -->
+  <script type="module" src="dashboard-integration.js"></script>
+  
+  <!-- Example dashboard script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add event listeners for the buttons
+      document.getElementById('refresh-btn').addEventListener('click', function() {
+        console.log('Refreshing dashboard data...');
+        loadDashboardData();
+      });
+      
+      document.getElementById('error-btn').addEventListener('click', function() {
+        console.error('Simulating an application error');
+        try {
+          // Deliberately cause an error
+          const obj = null;
+          obj.nonExistentMethod();
+        } catch (err) {
+          console.error('Error details:', err.message);
+        }
+      });
+      
+      // Initial data load
+      loadDashboardData();
+    });
+    
+    function loadDashboardData() {
+      // Simulate API calls
+      setTimeout(() => {
+        // Update user stats
+        document.getElementById('user-stats').innerHTML = `
+          <div>Total Users: 1,245</div>
+          <div>Active Now: 68</div>
+          <div>New Today: 12</div>
+        `;
+        console.log('User statistics loaded');
+        
+        if (window.dashDebugger) {
+          window.dashDebugger.setVariable('userStats', {
+            total: 1245,
+            active: 68,
+            newToday: 12
+          });
+        }
+      }, 500);
+      
+      setTimeout(() => {
+        // Update revenue data
+        document.getElementById('revenue-data').innerHTML = `
+          <div>Today: $1,280</div>
+          <div>This Week: $8,530</div>
+          <div>This Month: $24,120</div>
+        `;
+        console.log('Revenue data loaded');
+        
+        if (window.dashDebugger) {
+          window.dashDebugger.setVariable('revenueData', {
+            today: 1280,
+            week: 8530,
+            month: 24120
+          });
+        }
+      }, 800);
+      
+      setTimeout(() => {
+        // Update activities
+        document.getElementById('activities').innerHTML = `
+          <div>User login: John Smith (2 min ago)</div>
+          <div>New purchase: Order #1234 ($89.99)</div>
+          <div>Settings updated: Email notifications</div>
+        `;
+        console.info('Recent activities loaded');
+      }, 1200);
+      
+      setTimeout(() => {
+        // Update system status
+        const rand = Math.random();
+        if (rand > 0.8) {
+          // Occasionally show a warning
+          document.getElementById('system-status').innerHTML = `
+            <div style="color: orange;">Database: High Load (82%)</div>
+            <div>API: Normal</div>
+            <div>Storage: 42% Used</div>
+          `;
+          console.warn('Database is experiencing high load');
+        } else {
+          document.getElementById('system-status').innerHTML = `
+            <div>Database: Normal (45%)</div>
+            <div>API: Normal</div>
+            <div>Storage: 42% Used</div>
+          `;
+          console.log('System status: all normal');
+        }
+      }, 1500);
+    }
+  </script>
+</body>
+</html> 
