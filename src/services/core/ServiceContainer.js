@@ -46,8 +46,8 @@ class ServiceContainer {
 
       // Initialize arbitrage service
       const arbitrageService = new ArbitrageService(
-        this.get('execution'),
-        this.get('config')
+        this.get('config'),
+        this.get('aggregator')
       );
       await arbitrageService.initialize();
       this.services.set('arbitrage', arbitrageService);
