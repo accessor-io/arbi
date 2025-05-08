@@ -37,16 +37,7 @@ class ServiceContainer {
       await securityService.initialize();
       this.services.set('security', securityService);
 
-      // Initialize execution service
-      const executionService = new ExecutionService(
-        this.get('gas'),
-        this.get('security'),
-        this.get('config')
-      );
-      await executionService.initialize();
-      this.services.set('execution', executionService);
-
-      // Initialize route aggregator
+      // Initialize route aggregator first since other services depend on it
       const routeAggregator = new RouteAggregator(providers.mainnet, {
         cacheTimeoutMs: configService.get('aggregator.cacheTimeoutMs', 30000),
         defaultMaxHops: configService.get('aggregator.defaultMaxHops', 4),
@@ -64,6 +55,15 @@ class ServiceContainer {
       );
       await arbitrageService.initialize();
       this.services.set('arbitrage', arbitrageService);
+
+      // Initialize execution service after arbitrage service
+      const executionService = new ExecutionService(
+        this.get('gas'),
+        this.get('security'),
+        this.get('config')
+      );
+      await executionService.initialize();
+      this.services.set('execution', executionService);
 
       // Initialize monitoring services
       const notificationService = new NotificationService();
