@@ -84,6 +84,28 @@ This project visualizes the propagation of XOR differences through a sequence of
 - You can visualize the 2D XOR grid as a heatmap, with color intensity representing the magnitude of the XOR in each direction.
 - This provides a richer, more detailed view of how differences propagate through the data.
 
+## 3D XOR Difference Visualization: Combining Horizontal and Vertical
+
+### What Is the 3D Visualization?
+- The 3D XOR difference visualization combines both the horizontal and vertical XOR difference grids into a single 3D surface plot.
+- The X and Y axes represent position and level, while the Z axis represents the XOR value.
+- Both the horizontal and vertical grids are plotted as surfaces, often with a slight offset for clarity.
+
+### How to Interpret
+- Peaks and valleys in the 3D surface reveal where the largest changes occur in either direction.
+- Overlapping or intersecting features may indicate complex interactions or patterns in the data.
+- This visualization provides a comprehensive view of how differences propagate and interact across both axes.
+
+### How to Generate
+- Run the script:
+  ```bash
+  python src/visualization/xor_diff_3d_visualizer.py
+  ```
+- The output image will be saved as `xor_diff_3d_visualization.png` in your workspace.
+
+### Applications
+- Useful for advanced pattern detection, cryptographic analysis, and visual exploration of high-dimensional data.
+
 ---
 
 *This documentation was auto-generated to help you understand and extend the XOR difference visualization project.* 
