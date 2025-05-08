@@ -98,14 +98,19 @@ class DashboardDebugger {
   createToggleButton() {
     const toggleBtn = document.createElement('button');
     toggleBtn.id = 'debugger-toggle';
-    toggleBtn.innerHTML = 'Debug';
+    toggleBtn.innerHTML = 'Debug Console';
     toggleBtn.className = `debugger-toggle ${this.options.theme}`;
+    
+    toggleBtn.style.padding = '10px 20px';
+    toggleBtn.style.fontSize = '16px';
+    toggleBtn.style.backgroundColor = '#ff5500';
     
     toggleBtn.addEventListener('click', () => {
       this.toggle();
     });
     
     document.body.appendChild(toggleBtn);
+    console.log("Debug toggle button created and appended to body");
   }
   
   captureConsoleOutput() {
@@ -197,13 +202,7 @@ class DashboardDebugger {
     if (!this.isInitialized) return;
     
     const variablesListEl = document.querySelector(`#${this.options.containerId} .variables-list`);
-    if (!variablesListEl) return;
-    
-    if (this.variables.size === 0) {
-      variablesListEl.innerHTML = '<div class="empty-message">No variables tracked</div>';
-      return;
-    }
-    
+    if (!variablesListEl) return;c
     variablesListEl.innerHTML = '';
     this.variables.forEach((value, name) => {
       const variableEl = document.createElement('div');

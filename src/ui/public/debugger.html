@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arbitrage Bot Debugger</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .log-entry {
+      font-family: monospace;
+      margin-bottom: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .log-level-debug { background-color: #f8f9fa; }
+    .log-level-info { background-color: #e3f2fd; }
+    .log-level-warn { background-color: #fff3cd; }
+    .log-level-error { background-color: #f8d7da; }
+    
+    .code-snippet {
+      font-family: monospace;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .debug-panel {
+      height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+    
+    #structuredData {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    
+    .refresh-btn {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      z-index: 100;
+    }
+    
+    .nav-tabs .nav-link {
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <header class="py-3 text-center">
+      <h1>Ethereum Arbitrage Bot Debugger</h1>
+      <p class="lead">Monitor, Test, and Troubleshoot the Arbitrage Bot</p>
+      <nav class="nav nav-pills justify-content-center mb-3">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link active" href="debugger.html">Debugger</a>
+      </nav>
+    </header>
+    
+    <div class="row mb-4">
+      <div class="col-md-8">
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Live Logs</h5>
+            <div>
+              <button id="autoRefreshLogs" class="btn btn-sm btn-outline-primary">Auto-refresh</button>
+              <button id="clearLogs" class="btn btn-sm btn-outline-danger ms-2">Clear View</button>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div id="logContainer" class="p-2 debug-panel"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">System State</h5>
+            <button id="refreshState" class="btn btn-sm btn-outline-primary">Refresh</button>
+          </div>
+          <div class="card-body">
+            <ul class="nav nav-tabs" id="stateTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="arbitrage-tab" data-bs-toggle="tab" data-bs-target="#arbitrage" type="button" role="tab">Arbitrage</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="autotrader-tab" data-bs-toggle="tab" data-bs-target="#autotrader" type="button" role="tab">Auto Trader</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="monitoring-tab" data-bs-toggle="tab" data-bs-target="#monitoring" type="button" role="tab">Monitoring</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tasks-tab" data-bs-toggle="tab" data-bs-target="#tasks" type="button" role="tab">Tasks</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab">System</button>
+              </li>
+            </ul>
+            <div class="tab-content" id="stateTabsContent">
+              <div class="tab-pane fade show active" id="arbitrage" role="tabpanel">
+                <div id="arbitrageState" class="p-2 mt-2"></div>
+              </div>
+              <div class="tab-pane fade" id="autotrader" role="tabpanel">
+                <div id="autoTraderState" class="p-2 mt-2"></div>
+              </div>
+              <div class="tab-pane fade" id="monitoring" role="tabpanel">
+                <div id="monitoringState" class="p-2 mt-2"></div>
+              </div>
+              <div class="tab-pane fade" id="tasks" role="tabpanel">
+                <div id="tasksState" class="p-2 mt-2"></div>
+              </div>
+              <div class="tab-pane fade" id="system" role="tabpanel">
+                <div id="systemState" class="p-2 mt-2"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Test Components</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="testComponent" class="form-label">Component</label>
+              <select class="form-select" id="testComponent">
+                <option value="exchange">Exchange</option>
+                <option value="tokenManager">Token Manager</option>
+                <option value="gas">Gas Service</option>
+              </select>
+            </div>
+            
+            <div id="exchangeParams" class="component-params">
+              <div class="mb-3">
+                <label for="exchangeName" class="form-label">Exchange</label>
+                <select class="form-select" id="exchangeName">
+                  <option value="Uniswap">Uniswap</option>
+                  <option value="Sushiswap">Sushiswap</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="tokenA" class="form-label">Token A</label>
+                <div class="input-group">
+                  <select class="form-select" id="tokenASelect" style="max-width: 150px;">
+                    <option value="custom">Custom</option>
+                    <option value="WETH">WETH</option>
+                    <option value="USDC">USDC</option>
+                    <option value="USDT">USDT</option>
+                    <option value="WBTC">WBTC</option>
+                    <option value="DAI">DAI</option>
+                  </select>
+                  <input type="text" class="form-control" id="tokenA" placeholder="0x...">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="tokenB" class="form-label">Token B</label>
+                <div class="input-group">
+                  <select class="form-select" id="tokenBSelect" style="max-width: 150px;">
+                    <option value="custom">Custom</option>
+                    <option value="WETH">WETH</option>
+                    <option value="USDC">USDC</option>
+                    <option value="USDT">USDT</option>
+                    <option value="WBTC">WBTC</option>
+                    <option value="DAI">DAI</option>
+                  </select>
+                  <input type="text" class="form-control" id="tokenB" placeholder="0x...">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="amount" class="form-label">Amount</label>
+                <input type="text" class="form-control" id="amount" value="1.0">
+              </div>
+            </div>
+            
+            <div id="tokenManagerParams" class="component-params d-none">
+              <div class="mb-3">
+                <label for="tokenAddress" class="form-label">Token</label>
+                <div class="input-group">
+                  <select class="form-select" id="tokenAddressSelect" style="max-width: 150px;">
+                    <option value="custom">Custom</option>
+                    <option value="WETH">WETH</option>
+                    <option value="USDC">USDC</option>
+                    <option value="USDT">USDT</option>
+                    <option value="WBTC">WBTC</option>
+                    <option value="DAI">DAI</option>
+                  </select>
+                  <input type="text" class="form-control" id="tokenAddress" placeholder="0x...">
+                </div>
+              </div>
+            </div>
+            
+            <div id="gasParams" class="component-params d-none">
+              <p class="text-muted">No parameters needed</p>
+            </div>
+            
+            <div class="mb-3">
+              <label for="quickTokenLookup" class="form-label">Quick Token Lookup</label>
+              <div class="input-group mb-2">
+                <input type="text" class="form-control" id="tokenASymbol" placeholder="Token symbol (e.g., UNI)">
+                <button class="btn btn-outline-secondary" type="button" id="lookupTokenA">Find for Token A</button>
+              </div>
+              <div class="input-group">
+                <input type="text" class="form-control" id="tokenBSymbol" placeholder="Token symbol (e.g., LINK)">
+                <button class="btn btn-outline-secondary" type="button" id="lookupTokenB">Find for Token B</button>
+              </div>
+            </div>
+            
+            <button id="runTest" class="btn btn-primary">Run Test</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Results Modal -->
+    <div class="modal fade" id="resultsModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Test Results</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="structuredData"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="debugger.js"></script>
+</body>
+</html> 

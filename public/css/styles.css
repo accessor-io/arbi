@@ -1,0 +1,30 @@
+/* Fallback CSS file at root to handle any missed references */
+@import url('/src/ui/public/styles.css');
+
+/* Additional fallback styles in case the main CSS fails to load */
+body {
+  font-family: 'Arial', sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.header {
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem 0;
+}
+
+.footer {
+  background-color: #333;
+  color: #fff;
+  padding: 2rem 0;
+  margin-top: 2rem;
+} 

@@ -1,10 +1,11 @@
 import { ethers } from 'ethers'; // Use ES6 import
 import { logger } from '../utils/logger.js';
+import { BigNumber } from 'ethers';
 
 /**
  * Detects arbitrage opportunities by comparing prices from an aggregated source.
  */
-class ArbitrageDetector {
+export default class ArbitrageDetector {
   /**
    * Creates an instance of ArbitrageDetector.
    * @param {object} aggregatorService - Service that provides aggregated quotes across multiple sources. Must have a `getQuotes` method.
@@ -294,7 +295,63 @@ class ArbitrageDetector {
     this.SLIPPAGE_TOLERANCE = slippage;
     logger.info(`[ArbitrageDetector] Updated slippage tolerance to ${slippage}%`);
   }
-}
 
-// Use ES6 export
-export default ArbitrageDetector;
+  async analyzeTokenPair(tokenIn, tokenOut, amount) {
+    try {
+      // Convert amount to BigNumber
+      const amountIn = BigNumber.from(amount.toString());
+      
+      // Get direct route
+      const directRoute = await this.findDirectRoute(tokenIn, tokenOut, amountIn);
+      if (!directRoute) return null;
+
+      // Get reverse route
+      const reverseRoute = await this.findDirectRoute(tokenOut, tokenIn, directRoute.amountOut);
+      if (!reverseRoute) return null;
+
+      // Calculate profit
+      const profit = reverseRoute.amountOut.sub(amountIn);
+      const profitPercentage = profit.mul(10000).div(amountIn).toNumber() / 100;
+
+      if (profitPercentage >= this.MIN_PROFIT_THRESHOLD) {
+        return {
+          tokenIn,
+          tokenOut,
+          amountIn: amountIn.toString(),
+          amountOut: directRoute.amountOut.toString(),
+          reverseAmountIn: directRoute.amountOut.toString(),
+          reverseAmountOut: reverseRoute.amountOut.toString(),
+          profit: profit.toString(),
+          profitPercentage,
+          path: directRoute.path,
+          reversePath: reverseRoute.path
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`Error analyzing token pair ${tokenIn} -> ${tokenOut}:`, error);
+      return null;
+    }
+  }
+
+  async findDirectRoute(tokenA, tokenB, amountIn) {
+    try {
+      // Implementation of route finding logic
+      // Make sure all numeric values are handled as BigNumber
+      const amount = BigNumber.from(amountIn.toString());
+      
+      // Your route finding logic here
+      // Always use BigNumber for calculations
+      
+      return {
+        path: [tokenA, tokenB],
+        amountIn: amount,
+        amountOut: amount // Replace with actual calculation
+      };
+    } catch (error) {
+      console.error(`Error finding direct route ${tokenA} -> ${tokenB}:`, error);
+      return null;
+    }
+  }
+}

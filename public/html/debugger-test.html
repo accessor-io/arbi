@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debugger Test</title>
+  <link rel="stylesheet" href="src/ui/public/styles.css">
+  <script src="src/services/LoggingService.js" defer></script>
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <nav class="nav">
+        <div class="logo">
+          <h1>Debugger Test</h1>
+        </div>
+        <ul class="nav-list">
+          <li class="nav-item"><a href="index.html" class="nav-link">Home</a></li>
+          <li class="nav-item"><a href="docs.html" class="nav-link">Documentation</a></li>
+          <li class="nav-item"><a href="examples/dashboard-example.html" class="nav-link">Dashboard Example</a></li>
+          <li class="nav-item"><a href="arbitrage-dashboard.html" class="nav-link">Arbitrage Dashboard</a></li>
+          <li class="nav-item"><a href="debugger-test.html" class="nav-link">Debugger</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Debugger Console</h2>
+      <p>Use this panel to test debugging functionality.</p>
+      
+      <div class="form-group">
+        <label for="debug-input">Debug Command</label>
+        <input type="text" id="debug-input" class="form-control" placeholder="Enter a debug command...">
+      </div>
+      
+      <button id="run-command" class="btn btn-primary">Run Command</button>
+      <button id="clear-console" class="btn">Clear Console</button>
+      
+      <div class="debug-console" id="debug-console">
+        <pre>Debug console initialized. Enter a command above to begin.</pre>
+      </div>
+    </section>
+    
+    <section class="card">
+      <h2>Logger Settings</h2>
+      <div class="form-group">
+        <label for="log-level">Log Level</label>
+        <select id="log-level" class="form-control">
+          <option value="error">Error</option>
+          <option value="warn">Warning</option>
+          <option value="info" selected>Info</option>
+          <option value="debug">Debug</option>
+          <option value="trace">Trace</option>
+        </select>
+      </div>
+      
+      <div class="form-check">
+        <input type="checkbox" id="enable-console" class="form-check-input" checked>
+        <label for="enable-console" class="form-check-label">Enable Console Output</label>
+      </div>
+      
+      <div class="form-check">
+        <input type="checkbox" id="enable-file" class="form-check-input">
+        <label for="enable-file" class="form-check-label">Enable File Logging</label>
+      </div>
+      
+      <button id="apply-settings" class="btn btn-primary">Apply Settings</button>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2023 Project Name. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html> 

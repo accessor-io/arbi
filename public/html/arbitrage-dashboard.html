@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto Arbitrage Dashboard</title>
+  <!-- Fallback CSS in case the main one doesn't load -->
+  <link rel="stylesheet" href="/styles.css">
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="/src/ui/public/styles.css">
+  <!-- Add Chart.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Main dashboard script -->
+  <script type="module" src="/src/ui/arbitrage-dashboard.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <nav class="nav">
+        <div class="logo">
+          <h1>Crypto Arbitrage Dashboard</h1>
+        </div>
+        <ul class="nav-list">
+          <li class="nav-item"><a href="/index.html" class="nav-link">Home</a></li>
+          <li class="nav-item"><a href="/docs.html" class="nav-link">Documentation</a></li>
+          <li class="nav-item"><a href="/examples/dashboard-example.html" class="nav-link">Dashboard Example</a></li>
+          <li class="nav-item"><a href="/arbitrage-dashboard.html" class="nav-link active">Arbitrage Dashboard</a></li>
+          <li class="nav-item"><a href="/debugger-test.html" class="nav-link">Debugger</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="dashboard-header">
+      <h2>Cryptocurrency Arbitrage Opportunities</h2>
+      <p>View and analyze current arbitrage opportunities across crypto exchanges.</p>
+      
+      <div class="dashboard-controls">
+        <button id="scan-now" class="btn btn-primary">Scan Now</button>
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="auto-scan" checked>
+          <label class="form-check-label" for="auto-scan">Auto-scan</label>
+        </div>
+        <span id="last-scan-time">Last scan: Never</span>
+      </div>
+    </div>
+
+    <div class="dashboard-filters">
+      <div class="row">
+        <div class="col">
+          <div class="form-group">
+            <label for="opportunity-type">Opportunity Type</label>
+            <select id="opportunity-type" class="form-control">
+              <option value="all">All Types</option>
+              <option value="triangular">Triangular</option>
+              <option value="exchange">Exchange</option>
+            </select>
+          </div>
+        </div>
+        <div class="col">
+          <div class="form-group">
+            <label for="min-profit">Minimum Profit (%)</label>
+            <input type="number" id="min-profit" class="form-control" value="0.5" min="0" step="0.1">
+          </div>
+        </div>
+        <div class="col">
+          <div class="form-group">
+            <label for="gas-threshold">Max Gas (Gwei)</label>
+            <input type="number" id="gas-threshold" class="form-control" value="50" min="1" step="1">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col">
+        <div class="dashboard-card">
+          <div class="price-header">
+            <h3>Current Cryptocurrency Prices</h3>
+            <div class="price-update-info">
+              <span id="prices-last-updated">Last updated: Never</span>
+              <button id="refresh-prices" class="refresh-btn">↻</button>
+            </div>
+          </div>
+          <div id="price-container" class="price-container">
+            <div class="loading-indicator">Loading prices...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard">
+      <div class="dashboard-card">
+        <h3>Current Opportunities</h3>
+        <div class="table-responsive">
+          <table class="table" id="opportunities-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Path</th>
+                <th>Profit (%)</th>
+                <th>Gas Est.</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="5" class="text-center">Loading opportunities...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <h3>Exchange Comparison</h3>
+        <canvas id="exchange-chart"></canvas>
+      </div>
+      <div class="dashboard-card">
+        <h3>Token Arbitrage Frequency</h3>
+        <canvas id="token-chart"></canvas>
+      </div>
+      <div class="dashboard-card">
+        <h3>Profit vs Gas Cost Analysis</h3>
+        <canvas id="profit-gas-chart"></canvas>
+      </div>
+    </div>
+    
+    <div class="row mt-4">
+      <div class="col">
+        <div class="dashboard-card">
+          <h3>Recent Executions</h3>
+          <div class="table-responsive">
+            <table class="table" id="executions-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Path</th>
+                  <th>Profit</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="4" class="text-center">No recent executions</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2023 Crypto Arbitrage Project. All rights reserved.</p>
+    </div>
+  </footer>
+  
+  <!-- Add additional styles for the arbitrage dashboard -->
+  <style>
+    .chart-placeholder {
+      height: 200px;
+      background-color: #f8f9fa;
+      border: 1px dashed #ced4da;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+    }
+    
+    .dashboard-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    
+    #last-scan-time {
+      margin-left: auto;
+      color: #6c757d;
+      font-style: italic;
+    }
+    
+    .high-profit {
+      background-color: rgba(25, 135, 84, 0.1);
+    }
+    
+    .profit-positive {
+      color: #198754;
+      font-weight: 600;
+    }
+    
+    .profit-negative {
+      color: #dc3545;
+      font-weight: 600;
+    }
+    
+    .gas-high {
+      color: #dc3545;
+    }
+    
+    .gas-medium {
+      color: #fd7e14;
+    }
+    
+    .gas-low {
+      color: #198754;
+    }
+    
+    canvas {
+      width: 100% !important;
+      height: 200px !important;
+    }
+    
+    .active {
+      font-weight: bold;
+      color: #007bff !important;
+    }
+    
+    .text-center {
+      text-align: center;
+    }
+  </style>
+</body>
+</html> 

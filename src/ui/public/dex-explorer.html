@@ -7,6 +7,26 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <style>
+   
+
+    body {
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+
+    .card {
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border-radius: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+      background-color: white;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 1rem 1.5rem;
+    }
+
     .loading-overlay {
       position: fixed;
       top: 0;
@@ -19,157 +39,740 @@
       align-items: center;
       z-index: 1000;
     }
+
     .route-step {
       display: flex;
       align-items: center;
       margin: 10px 0;
-      padding: 10px;
-      background: #f8f9fa;
-      border-radius: 5px;
+      padding: 15px;
+      background: #f8fafc;
+      border-radius: 0.5rem;
+      border: 1px solid #e2e8f0;
     }
+
     .route-arrow {
       margin: 0 10px;
-      color: #6c757d;
+      color: #94a3b8;
     }
+
     .dex-badge {
       margin-left: 10px;
       font-size: 0.8em;
+      background-color: var(--primary-color);
     }
+
     .token-icon {
       width: 24px;
       height: 24px;
       margin-right: 5px;
+      border-radius: 50%;
     }
+
     .price-change {
       font-weight: bold;
     }
+
     .price-change.positive {
-      color: #28a745;
+      color: var(--success-color);
     }
+
     .price-change.negative {
-      color: #dc3545;
+      color: var(--danger-color);
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--secondary-color);
+      border-color: var(--secondary-color);
+    }
+
+    .form-control:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+    }
+
+    .form-select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+    }
+
+    .table {
+      margin-bottom: 0;
+    }
+
+    .table th {
+      background-color: #f8fafc;
+      border-bottom: 2px solid #e2e8f0;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .table td {
+      vertical-align: middle;
+      border-color: #e2e8f0;
+    }
+
+    .token-search {
+      position: relative;
+    }
+
+    .token-search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      max-height: 300px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .token-search-result {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+
+    .token-search-result:hover {
+      background-color: #f8fafc;
+    }
+
+    .token-search-result img {
+      width: 20px;
+      height: 20px;
+      margin-right: 0.5rem;
+    }
+
+    .token-details {
+      display: flex;
+      align-items: center;
+    }
+
+    .token-symbol {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+
+    .token-name {
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+
+    .price-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .price-value {
+      font-weight: 600;
+    }
+
+    .price-change {
+      font-size: 0.875rem;
+    }
+
+    .liquidity-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .liquidity-value {
+      font-weight: 600;
+    }
+
+    .liquidity-label {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .volume-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .volume-value {
+      font-weight: 600;
+    }
+
+    .volume-label {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .network-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background-color: #f8fafc;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .network-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .network-name {
+      font-weight: 600;
+    }
+
+    .network-chain-id {
+      color: #64748b;
+      font-size: 0.875rem;
     }
   </style>
+  
+  
 </head>
-<body>
-  <div class="container-fluid py-4">
-    <h1 class="mb-4">DEX Explorer</h1>
-    
-    <!-- Chain Selection -->
-    <div class="row mb-4">
-      <div class="col-md-6">
-        <select id="chainSelect" class="form-select">
-          <option value="1">Ethereum Mainnet</option>
-          <option value="56">BSC</option>
-          <option value="137">Polygon</option>
-          <option value="42161">Arbitrum</option>
-          <option value="10">Optimism</option>
+<body style="background: linear-gradient(120deg, #232526 0%, #414345 100%); min-height: 100vh; font-family: 'Inter', 'Fira Mono', 'Segoe UI', monospace;">
+  <div class="container-fluid py-4" style="max-width: 1100px;">
+    <div class="d-flex justify-content-between align-items-center mb-4 position-relative" style="background: rgba(30,41,59,0.95); border-radius: 1.25rem; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18); padding: 1.5rem 2rem; border: 1.5px solid #6366f1; backdrop-filter: blur(6px); overflow: visible;">
+      <h1 class="mb-0" style="font-family: 'Space Grotesk', 'Inter', sans-serif; font-size: 2.8rem; letter-spacing: 1.5px; color: #fff; text-shadow: 0 2px 16px #6366f1, 0 1px 0 #000; display: flex; align-items: center;">
+        <span style="background: linear-gradient(90deg, #a1ffce 0%, #faffd1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700;">DEX Explorer</span>
+      </h1>
+      <div class="network-info" style="background: linear-gradient(90deg, #18181b 60%, #232526 100%); border: 1.5px solid #232526; box-shadow: 0 2px 12px #18181b88; border-radius: 0.75rem; padding: 0.5rem 1.2rem; display: flex; align-items: center; gap: 0.7rem;">
+        <img id="networkIcon" src="" alt="" class="network-icon" style="filter: drop-shadow(0 0 8px #232526); border-radius: 50%; border: 2px solid #232526; background: #18181b;">
+        <span id="networkName" class="network-name" style="color: #f4f4f5; font-family: 'Space Grotesk', monospace; font-size: 1.08rem; letter-spacing: 0.5px;"></span>
+        <span id="networkChainId" class="network-chain-id" style="color: #fff; background: linear-gradient(90deg, #232526 0%, #18181b 100%); border-radius: 0.5rem; padding: 0.13rem 0.7rem; margin-left: 0.5rem; font-weight: 600; font-size: 0.93rem; box-shadow: 0 0 8px #232526aa;"></span>
+      </div>
+      <!-- Saturn Orbit Animation -->
+      <div class="saturn-orbit-outer" style="pointer-events:none;">
+        <span class="saturn-orbit-planet" style="font-size:1.5rem;">🪐</span>
+      </div>
+      <style>
+        .saturn-orbit-outer {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 4.5rem;
+          height: 4.5rem;
+          margin-top: -2.25rem;
+          margin-left: -2.25rem;
+          z-index: 2;
+          /* Make sure it floats above the card but below dropdowns */
+          pointer-events: none;
+        }
+        .saturn-orbit-planet {
+          position: absolute;
+          top: 0;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(0deg);
+          animation: saturn-orbit-spin 4.5s linear infinite, saturn-axis-spin 1.2s linear infinite;
+          /* Two animations: one for orbit, one for axis spin */
+          filter: drop-shadow(0 0 8px #fff176);
+          will-change: transform;
+        }
+        @keyframes saturn-orbit-spin {
+          0%   { transform: rotate(0deg) translateY(-2.25rem) rotate(0deg);}
+          100% { transform: rotate(360deg) translateY(-2.25rem) rotate(-360deg);}
+        }
+        @keyframes saturn-axis-spin {
+          0%   { filter: drop-shadow(0 0 8px #fff176) brightness(1);}
+          50%  { filter: drop-shadow(0 0 16px #fff176) brightness(1.2);}
+          100% { filter: drop-shadow(0 0 8px #fff176) brightness(1);}
+        }
+        /* Responsive: shrink orbit on small screens */
+        @media (max-width: 600px) {
+          .saturn-orbit-outer {
+            width: 2.8rem;
+            height: 2.8rem;
+            margin-top: -1.4rem;
+            margin-left: -1.4rem;
+          }
+        }
+      </style>
+    </div>
+    <!-- Solar System Animation Background -->
+    <div id="solar-system-bg" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; overflow: hidden;">
+      <!-- Sun -->
+      <div class="planet sun"></div>
+      <!-- Mercury -->
+      <div class="orbit orbit-mercury">
+        <div class="planet mercury"></div>
+      </div>
+      <!-- Venus -->
+      <div class="orbit orbit-venus">
+        <div class="planet venus"></div>
+      </div>
+      <!-- Earth -->
+      <div class="orbit orbit-earth">
+        <div class="planet earth"></div>
+        <div class="moon-orbit">
+          <div class="moon"></div>
+        </div>
+      </div>
+      <!-- Mars -->
+      <div class="orbit orbit-mars">
+        <div class="planet mars"></div>
+      </div>
+      <!-- Jupiter -->
+      <div class="orbit orbit-jupiter">
+        <div class="planet jupiter"></div>
+      </div>
+      <!-- Saturn -->
+      <div class="orbit orbit-saturn">
+        <div class="planet saturn">
+          <div class="saturn-ring"></div>
+        </div>
+      </div>
+      <!-- Uranus -->
+      <div class="orbit orbit-uranus">
+        <div class="planet uranus"></div>
+      </div>
+      <!-- Neptune -->
+      <div class="orbit orbit-neptune">
+        <div class="planet neptune"></div>
+      </div>
+    </div>
+    <style>
+      #solar-system-bg {
+        background: radial-gradient(ellipse at 60% 40%, #232946 0%, #0f172a 100%);
+        animation: bg-move 60s linear infinite alternate;
+      }
+      @keyframes bg-move {
+        0% { background-position: 60% 40%; }
+        100% { background-position: 40% 60%; }
+      }
+      .orbit {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        border: 1px dashed rgba(255,255,255,0.08);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+      }
+      .planet {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 16px 2px rgba(255,255,255,0.15);
+        pointer-events: none;
+      }
+      /* Sun */
+      .sun {
+        width: 60px;
+        height: 60px;
+        background: radial-gradient(circle, #fff176 0%, #f59e42 60%, #fbbf24 100%);
+        box-shadow: 0 0 60px 20px #fff17699, 0 0 120px 40px #f59e4299;
+        z-index: 1;
+        animation: sun-glow 3s ease-in-out infinite alternate;
+      }
+      @keyframes sun-glow {
+        0% { filter: brightness(1) blur(0px);}
+        100% { filter: brightness(1.2) blur(2px);}
+      }
+      /* Mercury */
+      .orbit-mercury { width: 110px; height: 110px; animation: orbit-mercury 6s linear infinite;}
+      .mercury { width: 10px; height: 10px; background: #bfc1c2; }
+      @keyframes orbit-mercury {
+        0% { transform: translate(-50%, -50%) rotate(0deg);}
+        100% { transform: translate(-50%, -50%) rotate(360deg);}
+      }
+      .orbit-mercury .mercury { top: 0; left: 50%; }
+
+      /* Venus */
+      .orbit-venus { width: 160px; height: 160px; animation: orbit-venus 10s linear infinite;}
+      .venus { width: 16px; height: 16px; background: #f5deb3; }
+      @keyframes orbit-venus {
+        0% { transform: translate(-50%, -50%) rotate(0deg);}
+        100% { transform: translate(-50%, -50%) rotate(360deg);}
+      }
+      .orbit-venus .venus { top: 0; left: 50%; }
+
+      /* Earth */
+      .orbit-earth { width: 220px; height: 220px; animation: orbit-earth 16s linear infinite;}
+      .earth { width: 18px; height: 18px; background: linear-gradient(135deg, #3b82f6 60%, #10b981 100%);}
+      @keyframes orbit-earth {
+        0% { transform: translate(-50%, -50%) rotate(0deg);}
+        100% { transform: translate(-50%, -50%) rotate(360deg);}
+      }
+      .orbit-earth .earth { top: 0; left: 50%; }
+      /* Moon */
+      .moon-orbit {
+        position: absolute;
+        width: 32px;
+        height: 32px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        pointer-events: none;
+        animation: moon-orbit 2.5s linear infinite;
+      }
+      @keyframes moon-orbit {
+        0% { transform: translate(-50%, -50%) rotate(0deg);}
+        100% { transform: translate(-50%, -50%) rotate(360deg);}
+      }
+      .moon {
+        width: 6px;
+        height: 6px;
+        background: #e0e0e0;
+        border-radius: 50%;
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 6px 1px #fff;
+      }
+
+      /* Mars */
+      .orbit-mars { width: 280px; height: 280px; animation: orbit-mars 22s linear infinite;}
+      .mars { width: 14px; height: 14px; background: #ef4444; }
+      @keyframes orbit-mars {
+        0% { transform: translate(-50%, -50%) rotate(0deg);}
+        100% { transform: translate(-50%, -50%) rotate(360deg);}
+      }
+      .orbit-mars .mars { top: 0; left: 50%; }
+
+      /* Jupiter */
+      .orbit-jupiter { width: 370px; height: 370px; animation: orbit-jupiter 36s linear infinite;}
+      .jupiter { width: 32px; height: 32px; background: linear-gradient(135deg, #fbbf24 60%, #f59e42 100%);}
+      @keyframes orbit-jupiter {
+        0% { transform: translate(-50%, -50%) rotate(0deg);}
+        100% { transform: translate(-50%, -50%) rotate(360deg);}
+      }
+      .orbit-jupiter .jupiter { top: 0; left: 50%; }
+
+      /* Saturn */
+      .orbit-saturn { width: 470px; height: 470px; animation: orbit-saturn 48s linear infinite;}
+      .saturn { width: 28px; height: 28px; background: #fde68a; position: relative;}
+      .saturn-ring {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 44px; height: 10px;
+        border-radius: 50%;
+        border: 2px solid #fbbf24;
+        border-left: 2px solid #f59e42;
+        border-right: 2px solid #f59e42;
+        transform: translate(-50%, -50%) rotate(-20deg);
+        opacity: 0.7;
+        pointer-events: none;
+      }
+      @keyframes orbit-saturn {
+        0% { transform: translate(-50%, -50%) rotate(0deg);}
+        100% { transform: translate(-50%, -50%) rotate(360deg);}
+      }
+      .orbit-saturn .saturn { top: 0; left: 50%; }
+
+      /* Uranus */
+      .orbit-uranus { width: 560px; height: 560px; animation: orbit-uranus 62s linear infinite;}
+      .uranus { width: 18px; height: 18px; background: #38bdf8; }
+      @keyframes orbit-uranus {
+        0% { transform: translate(-50%, -50%) rotate(0deg);}
+        100% { transform: translate(-50%, -50%) rotate(360deg);}
+      }
+      .orbit-uranus .uranus { top: 0; left: 50%; }
+
+      /* Neptune */
+      .orbit-neptune { width: 650px; height: 650px; animation: orbit-neptune 80s linear infinite;}
+      .neptune { width: 16px; height: 16px; background: #6366f1; }
+      @keyframes orbit-neptune {
+        0% { transform: translate(-50%, -50%) rotate(0deg);}
+        100% { transform: translate(-50%, -50%) rotate(360deg);}
+      }
+      .orbit-neptune .neptune { top: 0; left: 50%; }
+
+      /* Planets style */
+      .planet, .sun {
+        border-radius: 50%;
+        box-shadow: 0 0 8px 2px rgba(255,255,255,0.12);
+      }
+      /* Responsive: shrink solar system on small screens */
+      @media (max-width: 900px) {
+        .orbit-mercury { width: 70px; height: 70px;}
+        .orbit-venus { width: 100px; height: 100px;}
+        .orbit-earth { width: 140px; height: 140px;}
+        .orbit-mars { width: 180px; height: 180px;}
+        .orbit-jupiter { width: 230px; height: 230px;}
+        .orbit-saturn { width: 290px; height: 290px;}
+        .orbit-uranus { width: 340px; height: 340px;}
+        .orbit-neptune { width: 400px; height: 400px;}
+        .sun { width: 32px; height: 32px;}
+        .jupiter { width: 18px; height: 18px;}
+        .saturn { width: 14px; height: 14px;}
+        .saturn-ring { width: 22px; height: 5px;}
+      }
+      @media (max-width: 600px) {
+        #solar-system-bg { display: none; }
+      }
+    </style>
+    <!-- Chain and DEX Selection -->
+    <div class="row mb-4" style="background: linear-gradient(90deg, #18181b 60%, #232526 100%); border-radius: 1rem; box-shadow: 0 2px 12px #18181b88;">
+      <div class="col-md-6 d-flex flex-column align-items-start justify-content-center py-3">
+        <label class="form-label" style="font-family: 'Fira Mono', monospace; color: #a1a1aa; font-size: 1.1rem; letter-spacing: 1px;">Network</label>
+        <select id="chainSelect" class="form-select" style="background: #232526; border: 2px solid #27272a; border-radius: 1rem; font-family: 'Fira Mono', monospace; color: #f4f4f5; font-size: 1.05rem;">
+          <option value="1" style="color:#7c3aed;">Ethereum Mainnet</option>
+          <option value="56" style="color:#f59e42;">BSC</option>
+          <option value="137" style="color:#10b981;">Polygon</option>
+          <option value="42161" style="color:#6366f1;">Arbitrum</option>
+          <option value="10" style="color:#f472b6;">Optimism</option>
+        </select>
+      </div>
+      <div class="col-md-6 d-flex flex-column align-items-start justify-content-center py-3">
+        <label class="form-label" style="font-family: 'Fira Mono', monospace; color: #0a0a0a !important; font-size: 1.1rem; letter-spacing: 1px;">DEX</label>
+        <select id="dexSelect" 
+          class="form-select"
+          style="
+            background: #18181b !important;
+            border: 2px solid #232526 !important;
+            border-radius: 1rem !important;
+            font-family: 'Fira Mono', monospace !important;
+            color: #f4f4f5 !important;
+            font-size: 1.05rem !important;
+            box-shadow: none !important;
+            outline: none !important;
+          ">
+          <option value="" style="background: #18181b !important; color: #e5e5e5 !important;">All DEXes</option>
         </select>
       </div>
     </div>
 
-    <!-- DEX Selection -->
-    <div class="row mb-4">
-      <div class="col-md-6">
-        <select id="dexSelect" class="form-select">
-          <option value="">All DEXes</option>
-        </select>
+    <!-- Route Finder (Artistic Redesign) -->
+    <div class="card mb-4 shadow-lg border-0" style="background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);">
+      <div class="card-header d-flex align-items-center animate__animated animate__fadeInDown" style="background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%); color: #fff; border-radius: 0.5rem 0.5rem 0 0; position: relative; overflow: hidden;">
+        <i class="fas fa-compass fa-lg me-2 spin-on-hover" style="transition: transform 0.4s cubic-bezier(.68,-0.55,.27,1.55);"></i>
+        <h5 class="mb-0 flex-grow-1 route-finder-title" style="letter-spacing: 1px; transition: color 0.3s;">Route Finder</h5>
+        <span class="badge bg-light text-primary pulse-badge" style="font-size: 0.9rem; box-shadow: 0 0 0 0 #f472b6;">Beta</span>
+        <span class="route-glow"></span>
       </div>
-    </div>
+      <style>
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css');
 
-    <!-- Route Finder -->
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="mb-0">Route Finder</h5>
-      </div>
-      <div class="card-body">
-        <div class="row">
+        .spin-on-hover:hover {
+          transform: rotate(-20deg) scale(1.2);
+          color: #f59e42 !important;
+          filter: drop-shadow(0 0 8px #fff176);
+        }
+        .route-finder-title {
+          animation: popIn 0.7s cubic-bezier(.68,-0.55,.27,1.55);
+        }
+        @keyframes popIn {
+          0% { transform: scale(0.7) translateY(-20px); opacity: 0; }
+          70% { transform: scale(1.1) translateY(5px); opacity: 1; }
+          100% { transform: scale(1) translateY(0); }
+        }
+        .pulse-badge {
+          animation: pulseBadge 1.5s infinite;
+        }
+        @keyframes pulseBadge {
+          0% { box-shadow: 0 0 0 0 #f472b6; }
+          70% { box-shadow: 0 0 0 10px rgba(244,114,182,0); }
+          100% { box-shadow: 0 0 0 0 rgba(244,114,182,0); }
+        }
+        .route-glow {
+          position: absolute;
+          top: 0; left: 0; width: 100%; height: 100%;
+          pointer-events: none;
+          background: radial-gradient(circle at 80% 20%, #fff17644 0%, #f472b622 60%, transparent 100%);
+          opacity: 0.7;
+          animation: routeGlowAnim 3s infinite alternate;
+          z-index: 0;
+        }
+        @keyframes routeGlowAnim {
+          0% { opacity: 0.7; filter: blur(0px);}
+          100% { opacity: 1; filter: blur(2px);}
+        }
+      </style>
+      <div class="card-body py-4">
+        <div class="row g-4 align-items-end">
           <div class="col-md-3">
-            <label class="form-label">Token In</label>
-            <div class="input-group">
-              <input type="text" id="tokenIn" class="form-control" placeholder="Token address">
-              <button class="btn btn-outline-secondary" type="button" onclick="searchToken('tokenIn')">
-                <i class="fas fa-search"></i>
-              </button>
+            <label class="form-label fw-bold text-primary">Token In</label>
+            <div class="token-search position-relative">
+              <div class="input-group input-group-lg rounded-pill shadow-sm">
+                <span class="input-group-text bg-white border-0"><i class="fas fa-coins text-primary"></i></span>
+                <input type="text" id="tokenIn" class="form-control border-0 bg-white" placeholder="Token address or symbol" style="border-radius: 0 2rem 2rem 0;">
+                <button class="btn btn-outline-primary rounded-pill ms-2" type="button" onclick="searchToken('tokenIn')">
+                  <i class="fas fa-search"></i>
+                </button>
+              </div>
+              <div id="tokenInResults" class="token-search-results position-absolute w-100 mt-1 z-3"></div>
             </div>
           </div>
           <div class="col-md-3">
-            <label class="form-label">Token Out</label>
-            <div class="input-group">
-              <input type="text" id="tokenOut" class="form-control" placeholder="Token address">
-              <button class="btn btn-outline-secondary" type="button" onclick="searchToken('tokenOut')">
-                <i class="fas fa-search"></i>
-              </button>
+            <label class="form-label fw-bold text-primary">Token Out</label>
+            <div class="token-search position-relative">
+              <div class="input-group input-group-lg rounded-pill shadow-sm">
+                <span class="input-group-text bg-white border-0"><i class="fas fa-arrow-right-arrow-left text-success"></i></span>
+                <input type="text" id="tokenOut" class="form-control border-0 bg-white" placeholder="Token address or symbol" style="border-radius: 0 2rem 2rem 0;">
+                <button class="btn btn-outline-success rounded-pill ms-2" type="button" onclick="searchToken('tokenOut')">
+                  <i class="fas fa-search"></i>
+                </button>
+              </div>
+              <div id="tokenOutResults" class="token-search-results position-absolute w-100 mt-1 z-3"></div>
             </div>
           </div>
           <div class="col-md-3">
-            <label class="form-label">Amount In</label>
-            <input type="text" id="amountIn" class="form-control" placeholder="Amount">
+            <label class="form-label fw-bold text-primary">Amount In</label>
+            <div class="input-group input-group-lg rounded-pill shadow-sm">
+              <span class="input-group-text bg-white border-0"><i class="fas fa-wallet text-warning"></i></span>
+              <input type="text" id="amountIn" class="form-control border-0 bg-white" placeholder="Amount" style="border-radius: 0 2rem 2rem 0;">
+            </div>
           </div>
-          <div class="col-md-3">
-            <label class="form-label">&nbsp;</label>
-            <button class="btn btn-primary w-100" onclick="findBestRoute()">Find Best Route</button>
+          <div class="col-md-3 d-flex flex-column align-items-stretch">
+            <label class="form-label fw-bold text-white" style="opacity:0;">&nbsp;</label>
+            <button class="btn btn-gradient-primary btn-lg w-100 shadow" style="background: linear-gradient(90deg, #6366f1 0%, #10b981 100%); color: #fff; border-radius: 2rem;" onclick="findBestRoute()">
+              <i class="fas fa-route me-2"></i>Find Best Route
+            </button>
           </div>
         </div>
-        <div id="routeResult" class="mt-4" style="display: none;">
-          <h6>Best Route Found</h6>
-          <div id="routeSteps"></div>
-          <div class="mt-3">
-            <p>Total Output: <span id="totalOutput"></span></p>
-            <p>Profit: <span id="routeProfit"></span></p>
+        <div id="routeResult" class="mt-5" style="display: none;">
+          <div class="d-flex align-items-center mb-3">
+            <i class="fas fa-star text-warning me-2"></i>
+            <h6 class="mb-0 text-primary fw-bold">Best Route Found</h6>
+          </div>
+          <div id="routeSteps" class="mb-4"></div>
+          <div class="row g-4">
+            <div class="col-md-6">
+              <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #e0f2fe 0%, #f1f5f9 100%);">
+                <div class="card-body text-center">
+                  <h6 class="card-title text-info fw-bold"><i class="fas fa-arrow-down"></i> Total Output</h6>
+                  <p class="card-text display-6 fw-bold text-info" id="totalOutput"></p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #fef9c3 0%, #f1f5f9 100%);">
+                <div class="card-body text-center">
+                  <h6 class="card-title text-success fw-bold"><i class="fas fa-coins"></i> Profit</h6>
+                  <p class="card-text display-6 fw-bold text-success" id="routeProfit"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Token List with Artistic Touch and Abstract SVGs -->
+    <div class="position-relative mb-4">
+      <!-- Abstract SVG background for Token List -->
+      <svg class="position-absolute top-0 start-0" width="180" height="120" style="z-index:0; opacity:0.18;" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="90" cy="60" rx="80" ry="40" fill="url(#tokenListGradient1)" />
+        <defs>
+          <linearGradient id="tokenListGradient1" x1="0" y1="0" x2="180" y2="120" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#6366f1"/>
+            <stop offset="1" stop-color="#10b981"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <svg class="position-absolute bottom-0 end-0" width="120" height="80" style="z-index:0; opacity:0.13;" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="100" height="60" rx="30" fill="url(#tokenListGradient2)" />
+        <defs>
+          <linearGradient id="tokenListGradient2" x1="0" y1="0" x2="120" y2="80" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#e0e7ff"/>
+            <stop offset="1" stop-color="#f1f5f9"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="card border-0 shadow" style="background: linear-gradient(120deg, #f8fafc 60%, #e0e7ff 100%); border-radius: 1.5rem; position:relative; z-index:1;">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(90deg, #6366f1 0%, #10b981 100%); border-radius: 1.5rem 1.5rem 0 0;">
+          <h5 class="mb-0 text-white fw-bold" style="letter-spacing: 1px;">
+            <i class="fas fa-coins me-2 text-warning"></i>Token List
+          </h5>
+          <div class="d-flex gap-2">
+            <div class="input-group" style="width: 300px;">
+              <span class="input-group-text bg-white border-0"><i class="fas fa-search text-primary"></i></span>
+              <input type="text" class="form-control border-0" id="tokenSearch" placeholder="Search tokens..." style="background: #f1f5f9;">
+            </div>
+            <button class="btn btn-gradient-primary shadow" style="background: linear-gradient(90deg, #6366f1 0%, #10b981 100%); color: #fff; border-radius: 2rem;" onclick="loadTopTokens()">
+              <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+          </div>
+        </div>
+        <div class="card-body" style="background: rgba(255,255,255,0.95); border-radius: 0 0 1.5rem 1.5rem;">
+          <div class="table-responsive">
+            <table class="table align-middle" style="border-radius: 1rem; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #e0e7ff 0%, #f1f5f9 100%);">
+                <tr>
+                  <th class="text-primary fw-bold"><i class="fas fa-coins me-1"></i>Token</th>
+                  <th class="text-info fw-bold"><i class="fas fa-dollar-sign me-1"></i>Price</th>
+                  <th class="text-warning fw-bold"><i class="fas fa-chart-line me-1"></i>24h Change</th>
+                  <th class="text-success fw-bold"><i class="fas fa-water me-1"></i>Liquidity</th>
+                  <th class="text-secondary fw-bold"><i class="fas fa-exchange-alt me-1"></i>Volume (24h)</th>
+                  <th class="text-dark fw-bold"><i class="fas fa-cogs me-1"></i>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tokenList"></tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Token List -->
-    <div class="card mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Token List</h5>
-        <button class="btn btn-sm btn-primary" onclick="loadTopTokens()">
-          <i class="fas fa-sync-alt"></i> Refresh
-        </button>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Token</th>
-                <th>Price</th>
-                <th>24h Change</th>
-                <th>Liquidity</th>
-                <th>Volume (24h)</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="tokenList"></tbody>
-          </table>
+    <!-- Arbitrage Opportunities with Abstract SVGs -->
+    <div class="position-relative mb-4">
+      <!-- Abstract SVG background for Arbitrage -->
+      <svg class="position-absolute top-0 end-0" width="140" height="100" style="z-index:0; opacity:0.15;" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="70" cy="50" r="45" fill="url(#arbitrageGradient1)" />
+        <defs>
+          <radialGradient id="arbitrageGradient1" cx="50%" cy="50%" r="100%">
+            <stop offset="0%" stop-color="#f59e0b"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0.7"/>
+          </radialGradient>
+        </defs>
+      </svg>
+      <svg class="position-absolute bottom-0 start-0" width="100" height="60" style="z-index:0; opacity:0.10;" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="0,60 100,0 100,60" fill="url(#arbitrageGradient2)" />
+        <defs>
+          <linearGradient id="arbitrageGradient2" x1="0" y1="0" x2="100" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#10b981"/>
+            <stop offset="1" stop-color="#f1f5f9"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="card" style="position:relative; z-index:1;">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Arbitrage Opportunities</h5>
+          <div class="d-flex gap-2">
+            <div class="input-group" style="width: 200px;">
+              <span class="input-group-text">Amount</span>
+              <input type="text" class="form-control" id="arbitrageAmount" placeholder="1">
+            </div>
+            <button class="btn btn-primary" onclick="loadArbitrageOpportunities()">
+              <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Arbitrage Opportunities -->
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Arbitrage Opportunities</h5>
-        <button class="btn btn-sm btn-primary" onclick="loadArbitrageOpportunities()">
-          <i class="fas fa-sync-alt"></i> Refresh
-        </button>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Token Pair</th>
-                <th>Profit</th>
-                <th>Route</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="arbitrageList"></tbody>
-          </table>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Token Pair</th>
+                  <th>Profit</th>
+                  <th>Route</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="arbitrageList"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

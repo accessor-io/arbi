@@ -3,23 +3,123 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
+import RPCProvider from '../services/RPCProvider';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Common DEX ABIs
+const COMMON_ABIS = {
+  uniswap: [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amountIn",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address[]",
+          "name": "path",
+          "type": "address[]"
+        }
+      ],
+      "name": "getAmountsOut",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "amounts",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amountOut",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address[]",
+          "name": "path",
+          "type": "address[]"
+        }
+      ],
+      "name": "getAmountsIn",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "amounts",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amountIn",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountOutMin",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address[]",
+          "name": "path",
+          "type": "address[]"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "deadline",
+          "type": "uint256"
+        }
+      ],
+      "name": "swapExactTokensForTokens",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "amounts",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+};
 
 class BaseDex {
   constructor(provider, config = {}) {
     if (!provider) {
       throw new Error('Provider is required');
     }
-    this.provider = provider;
+    
+    // Initialize RPC provider if not provided
+    this.rpcProvider = provider instanceof RPCProvider ? provider : new RPCProvider(config);
+    this.provider = this.rpcProvider.getProvider(config.network || 'ethereum');
+    
     this.config = {
       routerAddress: config.routerAddress,
       factoryAddress: config.factoryAddress,
       name: config.name || 'BaseDex',
       version: config.version || 'v2',
+      network: config.network || 'ethereum',
       ...config
     };
+    
     this.routerContract = null;
     this.abiLoaded = false;
     this.contracts = new Map();
@@ -33,60 +133,83 @@ class BaseDex {
     return this.config.version;
   }
 
-  // Lazy-load ABI only when needed
   async loadABI() {
     if (this.abiLoaded) return;
-    
-    const abiCachePath = path.join(__dirname, '../../cache', `${this.name.toLowerCase()}_router.json`);
-    const cacheDir = path.dirname(abiCachePath);
-    
+
     try {
-      // Ensure cache directory exists
-      if (!fs.existsSync(cacheDir)) {
-        fs.mkdirSync(cacheDir, { recursive: true });
-      }
+      // First try to load from local ABI file
+      const abiPath = path.join(__dirname, 'abis', `${this.name.toLowerCase()}.json`);
+      let abi;
 
-      // Try to load from cache first
-      if (fs.existsSync(abiCachePath)) {
-        const abiData = JSON.parse(fs.readFileSync(abiCachePath, 'utf8'));
-        this.routerContract = new ethers.Contract(this.config.routerAddress, abiData, this.provider);
-        this.abiLoaded = true;
-        return;
-      }
-    } catch (error) {
-      console.log(`Cache miss or error for ${this.name} ABI:`, error.message);
-    }
-
-    // Fetch from Etherscan if not in cache
-    try {
-      const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-      if (!etherscanApiKey) {
-        throw new Error('ETHERSCAN_API_KEY environment variable is not set');
-      }
-
-      const response = await axios.get(
-        `https://api.etherscan.io/api?module=contract&action=getabi&address=${this.config.routerAddress}&apikey=${etherscanApiKey}`
-      );
-      
-      if (response.data.status === '1') {
-        const abi = JSON.parse(response.data.result);
-        
-        // Save to cache
-        try {
-          fs.writeFileSync(abiCachePath, JSON.stringify(abi));
-        } catch (error) {
-          console.warn(`Failed to cache ABI for ${this.name}:`, error.message);
-        }
-        
-        this.routerContract = new ethers.Contract(this.config.routerAddress, abi, this.provider);
-        this.abiLoaded = true;
+      if (fs.existsSync(abiPath)) {
+        const abiData = await fs.promises.readFile(abiPath, 'utf8');
+        abi = JSON.parse(abiData);
       } else {
-        throw new Error(`Failed to fetch ABI: ${response.data.message}`);
+        // Fallback to common ABIs
+        abi = COMMON_ABIS[this.name.toLowerCase()] || COMMON_ABIS.uniswap;
       }
+
+      if (!abi) {
+        throw new Error(`No ABI found for ${this.name}`);
+      }
+
+      this.routerContract = new ethers.Contract(
+        this.config.routerAddress,
+        abi,
+        this.provider
+      );
+
+      this.abiLoaded = true;
+      console.log(`Successfully loaded ABI for ${this.name}`);
     } catch (error) {
-      console.error(`Error loading ABI for ${this.name}:`, error.message);
+      console.error(`Failed to load ABI for ${this.name}:`, error);
       throw error;
     }
+  }
+
+  async fetchABIFromMultipleSources() {
+    // Try Etherscan first
+    try {
+      const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+      if (etherscanApiKey) {
+        const response = await axios.get(
+          `https://api.etherscan.io/api?module=contract&action=getabi&address=${this.config.routerAddress}&apikey=${etherscanApiKey}`
+        );
+        
+        if (response.data.status === '1') {
+          return JSON.parse(response.data.result);
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch ABI from Etherscan:`, error.message);
+    }
+
+    // Try 4byte.directory
+    try {
+      const response = await axios.get(
+        `https://www.4byte.directory/api/v1/signatures/?hex_signature=${this.config.routerAddress}`
+      );
+      if (response.data && response.data.results && response.data.results.length > 0) {
+        return response.data.results[0].text_signature;
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch ABI from 4byte:`, error.message);
+    }
+
+    // Try Sourcify
+    try {
+      const response = await axios.get(
+        `https://sourcify.dev/server/verify/${this.config.routerAddress}`
+      );
+      if (response.data && response.data.abi) {
+        return response.data.abi;
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch ABI from Sourcify:`, error.message);
+    }
+
+    // Fallback to common ABIs
+    return COMMON_ABIS[this.name.toLowerCase()] || COMMON_ABIS.uniswap;
   }
 
   async getTokenPrice(tokenAddress, baseTokenAddress, amount) {

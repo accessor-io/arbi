@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto Dashboard Test</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .test-box {
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    button {
+      padding: 8px 16px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Crypto Dashboard Test</h1>
+  
+  <div class="test-box">
+    <h2>1. Price Service Test</h2>
+    <button id="test-price-service">Test Price Service</button>
+    <pre id="price-service-result">Click button to test...</pre>
+  </div>
+  
+  <div class="test-box">
+    <h2>2. Arbitrage Service Test</h2>
+    <button id="test-arbitrage-service">Test Arbitrage Service</button>
+    <pre id="arbitrage-service-result">Click button to test...</pre>
+  </div>
+
+  <div class="test-box">
+    <h2>3. File Path Info</h2>
+    <button id="show-paths">Show Path Info</button>
+    <pre id="path-info">Click button to show path information...</pre>
+  </div>
+
+  <script type="module">
+    // Test the price service
+    document.getElementById('test-price-service').addEventListener('click', async () => {
+      const resultElem = document.getElementById('price-service-result');
+      resultElem.textContent = 'Testing...';
+      
+      try {
+        // Try to import the price service
+        const priceServiceModule = await import('/src/services/priceService.js');
+        const priceService = priceServiceModule.default;
+        
+        // Get prices
+        const prices = await priceService.getPrices(['bitcoin', 'ethereum']);
+        
+        resultElem.textContent = 'SUCCESS!\nPrice Service loaded correctly.\n\nResults:\n' + 
+          JSON.stringify(prices, null, 2);
+      } catch (error) {
+        resultElem.textContent = 'ERROR!\n' + error.toString();
+      }
+    });
+
+    // Test the arbitrage service
+    document.getElementById('test-arbitrage-service').addEventListener('click', async () => {
+      const resultElem = document.getElementById('arbitrage-service-result');
+      resultElem.textContent = 'Testing...';
+      
+      try {
+        // Try to import the arbitrage service
+        const arbitrageServiceModule = await import('/src/services/data/ArbitrageService.js');
+        const arbitrageService = arbitrageServiceModule.default;
+        
+        // Scan for opportunities
+        await arbitrageService.scan();
+        const opportunities = arbitrageService.getOpportunities();
+        
+        resultElem.textContent = 'SUCCESS!\nArbitrage Service loaded correctly.\n\nFound ' + 
+          opportunities.length + ' opportunities.\n\nFirst opportunity:\n' + 
+          JSON.stringify(opportunities[0], null, 2);
+      } catch (error) {
+        resultElem.textContent = 'ERROR!\n' + error.toString();
+      }
+    });
+
+    // Show path info
+    document.getElementById('show-paths').addEventListener('click', () => {
+      const resultElem = document.getElementById('path-info');
+      resultElem.textContent = 'Current page URL: ' + window.location.href + 
+        '\nDocument base URL: ' + document.baseURI +
+        '\nLocation pathname: ' + window.location.pathname;
+    });
+  </script>
+</body>
+</html> 

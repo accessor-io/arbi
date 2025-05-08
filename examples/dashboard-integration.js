@@ -1,57 +1,64 @@
 import DashboardDebugger from '../src/debugger/debugger.js';
 
-// Initialize the debugger when your dashboard loads
+// Reliable debugger integration
 document.addEventListener('DOMContentLoaded', function() {
-  // Create the debugger instance
-  const debugger = new DashboardDebugger({
-    theme: 'dark',               // 'dark' or 'light'
-    position: 'bottom-right',    // 'bottom-right', 'bottom-left', 'top-right', 'top-left'
-    maxLogEntries: 200,          // Maximum number of log entries to keep
-    allowConsoleCapture: true    // Capture console.log, error, warn, info
-  });
+  // Check if debugger is already initialized from the HTML file
+  if (!window.dashDebugger) {
+    console.log("Initializing dashboard debugger from integration script...");
+    
+    try {
+      // First try the imported version
+      if (typeof DashboardDebugger === 'function') {
+        const debugger = new DashboardDebugger({
+          theme: 'dark',
+          position: 'bottom-right',
+          maxLogEntries: 200,
+          allowConsoleCapture: true
+        });
+        
+        window.dashDebugger = debugger;
+        console.log("Debugger successfully initialized from integration script");
+        
+        // Force it to be visible for testing
+        debugger.show();
+      } else {
+        console.error("DashboardDebugger class not found in integration script");
+      }
+    } catch (error) {
+      console.error("Error initializing debugger from integration script:", error);
+    }
+  } else {
+    console.log("Debugger already initialized, using existing instance");
+  }
   
-  // Store it globally for access across your dashboard
-  window.dashDebugger = debugger;
-  
-  // Example usage
-  // Log messages manually
-  debugger.log('info', 'Dashboard initialized');
-  
-  // Track variables
-  debugger.setVariable('currentUser', { 
-    id: 123, 
-    name: 'John Doe', 
-    role: 'Admin' 
-  });
-  
-  // Example of how to use it with API calls
-  fetch('/api/dashboard/data')
-    .then(response => response.json())
-    .then(data => {
-      // Log the API response
-      debugger.log('info', 'API data received:', data);
-      
-      // Track important data
-      debugger.setVariable('dashboardData', data);
-      
-      // Continue with your dashboard logic
-      updateDashboard(data);
-    })
-    .catch(error => {
-      // Log errors
-      debugger.log('error', 'API request failed:', error);
+  // Example usage of the debugger
+  if (window.dashDebugger) {
+    // Log messages
+    window.dashDebugger.log('info', 'Dashboard initialized from integration script');
+    
+    // Track variables
+    window.dashDebugger.setVariable('currentUser', { 
+      id: 123, 
+      name: 'John Doe', 
+      role: 'Admin' 
     });
+  }
 });
 
-// Example function that uses the debugger
+// Example function
 function updateDashboard(data) {
   try {
     // Your dashboard update logic here
     
-    // Log progress
-    window.dashDebugger.log('log', 'Dashboard updated with new data');
+    // Log progress if debugger exists
+    if (window.dashDebugger) {
+      window.dashDebugger.log('log', 'Dashboard updated with new data');
+    }
   } catch (error) {
     // Log any errors
-    window.dashDebugger.log('error', 'Error updating dashboard:', error);
+    if (window.dashDebugger) {
+      window.dashDebugger.log('error', 'Error updating dashboard:', error);
+    }
+    console.error('Error updating dashboard:', error);
   }
 } 

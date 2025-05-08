@@ -1,0 +1,51 @@
+service: ethereum-arbitrage-bot
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  memorySize: 1024
+  timeout: 30
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  environment:
+    ETH_MAINNET_RPC: ${env:ETH_MAINNET_RPC}
+    PRIVATE_KEY: ${env:PRIVATE_KEY}
+    ETHERSCAN_API_KEY: ${env:ETHERSCAN_API_KEY}
+    AUTO_TRADE: ${env:AUTO_TRADE, 'false'}
+    MIN_PROFIT_PERCENT: ${env:MIN_PROFIT_PERCENT, '1.0'}
+    MAX_TRADE_AMOUNT: ${env:MAX_TRADE_AMOUNT, '1.0'}
+    SLIPPAGE_TOLERANCE: ${env:SLIPPAGE_TOLERANCE, '0.5'}
+    LOG_LEVEL: ${env:LOG_LEVEL, 'info'}
+    API_KEY: ${env:API_KEY}
+
+functions:
+  api:
+    handler: src/lambda.handler
+    events:
+      - http:
+          path: /
+          method: any
+          cors: true
+      - http:
+          path: /{proxy+}
+          method: any
+          cors: true
+
+  scanner:
+    handler: src/scannerLambda.handler
+    events:
+      - schedule: rate(1 minute)
+
+resources:
+  Resources:
+    ArbitrageCacheTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-cache
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH 

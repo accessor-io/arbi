@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import DexAggregator from '../services/DexAggregator.js';
+import RouteAggregator from '../services/RouteAggregator.js';
+import { providers } from '../config/network.js';
+import TokenManager from '../services/utils/TokenManager.js';
+
 const router = express.Router();
-const DexAggregator = require('../services/DexAggregator');
-const RouteAggregator = require('../services/RouteAggregator');
-const { providers } = require('../config/network');
-const TokenManager = require('../services/TokenManager');
 
 // Initialize services
 const dexAggregators = new Map();
@@ -315,4 +316,4 @@ router.get('/arbitrage', async (req, res) => {
   }
 });
 
-module.exports = router; 
+export default router; 

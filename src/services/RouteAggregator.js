@@ -107,7 +107,7 @@ class RouteAggregator {
       // --- 1 Hop (Direct Route) ---
       if (maxHops >= 1) {
           try {
-              const directPrice = await this.dexAggregator.getBestPrice(tokenIn, tokenOut, inputAmountBN);
+              const directPrice = await this.dexAggregator.getBestPrice(tokenIn, tokenOut, inputAmountBN.toString());
               if (directPrice?.bestBuy?.amountOut) {
                   const directAmountOutBN = ethers.getBigInt(directPrice.bestBuy.amountOut);
                   if (directAmountOutBN > 0n) {
@@ -135,12 +135,12 @@ class RouteAggregator {
       if (maxHops >= 2 && intermediateTokens.length > 0) {
         for (const intermediate1 of intermediateTokens) {
           try {
-            const hop1 = await this.dexAggregator.getBestPrice(tokenIn, intermediate1, inputAmountBN);
+            const hop1 = await this.dexAggregator.getBestPrice(tokenIn, intermediate1, inputAmountBN.toString());
             if (!hop1?.bestBuy?.amountOut) continue;
             const amountHop1Out = ethers.getBigInt(hop1.bestBuy.amountOut);
             if (amountHop1Out <= 0n) continue;
 
-            const hop2 = await this.dexAggregator.getBestPrice(intermediate1, tokenOut, amountHop1Out);
+            const hop2 = await this.dexAggregator.getBestPrice(intermediate1, tokenOut, amountHop1Out.toString());
             if (!hop2?.bestBuy?.amountOut) continue;
             const amountHop2Out = ethers.getBigInt(hop2.bestBuy.amountOut);
             if (amountHop2Out <= 0n) continue;
@@ -166,7 +166,7 @@ class RouteAggregator {
           const firstHopResults = new Map();
           for (const intermediate1 of intermediateTokens) {
               try {
-                  const hop1 = await this.dexAggregator.getBestPrice(tokenIn, intermediate1, inputAmountBN);
+                  const hop1 = await this.dexAggregator.getBestPrice(tokenIn, intermediate1, inputAmountBN.toString());
                   if (hop1?.bestBuy?.amountOut) {
                       const amountHop1Out = ethers.getBigInt(hop1.bestBuy.amountOut);
                       if (amountHop1Out > 0n) {
@@ -181,12 +181,12 @@ class RouteAggregator {
               for (const intermediate2 of intermediateTokens) {
                   if (intermediate1 === intermediate2) continue; // Avoid A->B->B->C
                   try {
-                      const hop2 = await this.dexAggregator.getBestPrice(intermediate1, intermediate2, amountHop1Out);
+                      const hop2 = await this.dexAggregator.getBestPrice(intermediate1, intermediate2, amountHop1Out.toString());
                       if (!hop2?.bestBuy?.amountOut) continue;
                       const amountHop2Out = ethers.getBigInt(hop2.bestBuy.amountOut);
                       if (amountHop2Out <= 0n) continue;
 
-                      const hop3 = await this.dexAggregator.getBestPrice(intermediate2, tokenOut, amountHop2Out);
+                      const hop3 = await this.dexAggregator.getBestPrice(intermediate2, tokenOut, amountHop2Out.toString());
                       if (!hop3?.bestBuy?.amountOut) continue;
                       const amountHop3Out = ethers.getBigInt(hop3.bestBuy.amountOut);
                       if (amountHop3Out <= 0n) continue;
@@ -214,7 +214,7 @@ class RouteAggregator {
           const firstHopResults = new Map(); // As calculated for 3 hops
           for (const intermediate1 of intermediateTokens) {
               try {
-                  const hop1 = await this.dexAggregator.getBestPrice(tokenIn, intermediate1, inputAmountBN);
+                  const hop1 = await this.dexAggregator.getBestPrice(tokenIn, intermediate1, inputAmountBN.toString());
                   if (hop1?.bestBuy?.amountOut) {
                       const amountHop1Out = ethers.getBigInt(hop1.bestBuy.amountOut);
                       if (amountHop1Out > 0n) {
@@ -229,7 +229,7 @@ class RouteAggregator {
               for (const intermediate2 of intermediateTokens) {
                   if (intermediate1 === intermediate2) continue;
                   try {
-                      const hop2 = await this.dexAggregator.getBestPrice(intermediate1, intermediate2, hop1Result.amountOut);
+                      const hop2 = await this.dexAggregator.getBestPrice(intermediate1, intermediate2, hop1Result.amountOut.toString());
                       if (hop2?.bestBuy?.amountOut) {
                           const amountHop2Out = ethers.getBigInt(hop2.bestBuy.amountOut);
                           if (amountHop2Out > 0n) {
@@ -253,12 +253,12 @@ class RouteAggregator {
                   // Avoid cycles within the 4 hops
                   if (intermediate3 === intermediate1 || intermediate3 === intermediate2) continue;
                   try {
-                      const hop3 = await this.dexAggregator.getBestPrice(intermediate2, intermediate3, amountHop2Out);
+                      const hop3 = await this.dexAggregator.getBestPrice(intermediate2, intermediate3, amountHop2Out.toString());
                       if (!hop3?.bestBuy?.amountOut) continue;
                       const amountHop3Out = ethers.getBigInt(hop3.bestBuy.amountOut);
                       if (amountHop3Out <= 0n) continue;
 
-                      const hop4 = await this.dexAggregator.getBestPrice(intermediate3, tokenOut, amountHop3Out);
+                      const hop4 = await this.dexAggregator.getBestPrice(intermediate3, tokenOut, amountHop3Out.toString());
                       if (!hop4?.bestBuy?.amountOut) continue;
                       const amountHop4Out = ethers.getBigInt(hop4.bestBuy.amountOut);
                       if (amountHop4Out <= 0n) continue;

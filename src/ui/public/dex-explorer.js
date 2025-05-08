@@ -5,9 +5,9 @@
 // }
 
 import { ethers } from 'ethers';
-import GasService from '../../services/GasService';
-import Uniswap from '../../exchanges/Uniswap';
-import config from '../../config/config';
+import GasService from '../../services/utils/GasService.js';
+import Uniswap from '../../exchanges/Uniswap.js';
+import config from '../../config/config.js';
 
 // Initialize provider
 const provider = new ethers.providers.JsonRpcProvider(config.api.infura);
@@ -19,6 +19,31 @@ const uniswap = new Uniswap(provider);
 // Global variables
 let currentChain = '1';
 let currentDex = '';
+let tokenSearchTimeout = null;
+
+// Network configuration
+const networks = {
+    '1': {
+        name: 'Ethereum Mainnet',
+        icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png'
+    },
+    '56': {
+        name: 'BSC',
+        icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/info/logo.png'
+    },
+    '137': {
+        name: 'Polygon',
+        icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png'
+    },
+    '42161': {
+        name: 'Arbitrum',
+        icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png'
+    },
+    '10': {
+        name: 'Optimism',
+        icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png'
+    }
+};
 
 // Display gas prices
 async function updateGasPrices() {

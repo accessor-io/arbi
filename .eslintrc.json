@@ -1,0 +1,55 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true,
+    "jest": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:prettier/recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-console": "warn",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "prettier/prettier": "error",
+    "no-async-promise-executor": "error",
+    "no-await-in-loop": "warn",
+    "no-promise-executor-return": "error",
+    "require-atomic-updates": "error",
+    "max-len": ["error", { "code": 100, "ignoreUrls": true }],
+    "complexity": ["error", 10],
+    "curly": ["error", "all"],
+    "default-case": "error",
+    "dot-notation": "error",
+    "eqeqeq": ["error", "always"],
+    "no-alert": "error",
+    "no-else-return": "error",
+    "no-empty-function": "error",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-invalid-this": "error",
+    "no-loop-func": "error",
+    "no-multi-spaces": "error",
+    "no-new-func": "error",
+    "no-new-wrappers": "error",
+    "no-param-reassign": "error",
+    "no-return-assign": "error",
+    "no-return-await": "error",
+    "no-self-compare": "error",
+    "no-sequences": "error",
+    "no-throw-literal": "error",
+    "no-unmodified-loop-condition": "error",
+    "no-unused-expressions": "error",
+    "no-useless-call": "error",
+    "no-useless-concat": "error",
+    "no-useless-return": "error",
+    "prefer-promise-reject-errors": "error",
+    "radix": "error",
+    "require-await": "error",
+    "yoda": "error"
+  }
+} 
