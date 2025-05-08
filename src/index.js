@@ -5,11 +5,13 @@ import dotenv from 'dotenv';
 import { ethers } from 'ethers';
 import { logger } from './utils/logger.js';
 import ServiceContainer from './services/ServiceContainer.js';
-import ArbitrageDetector from './core/ArbitrageDetector';
-import UniswapDex from './exchanges/UniswapDex';
-import SushiswapDex from './exchanges/SushiswapDex';
-import PancakeSwapDex from './exchanges/PancakeSwapDex';
+import ArbitrageDetector from './core/ArbitrageDetector.js';
+import UniswapDex from './exchanges/UniswapDex.js';
+import SushiswapDex from './exchanges/SushiswapDex.js';
+import PancakeSwapDex from './exchanges/PancakeSwapDex.js';
 import RPCProvider from './services/RPCProvider.js';
+import TokenManager from './services/TokenManager.js';
+import AggregatorService from './services/AggregatorService.js';
 
 // Load environment variables
 dotenv.config();
@@ -42,6 +44,16 @@ class ArbitrageApp {
       await rpcProvider.initialize();
       this.container.services.set('rpcProvider', rpcProvider);
 
+      // Initialize token manager
+      const tokenManager = new TokenManager(rpcProvider);
+      await tokenManager.initialize();
+      this.container.services.set('tokenManager', tokenManager);
+
+      // Initialize aggregator service
+      const aggregatorService = new AggregatorService(rpcProvider);
+      await aggregatorService.initialize();
+      this.container.services.set('aggregatorService', aggregatorService);
+
       // Initialize DEXes
       const dexes = [
         new UniswapDex(rpcProvider),
@@ -51,11 +63,10 @@ class ArbitrageApp {
       this.container.services.set('dexes', dexes);
 
       // Initialize arbitrage detector
-      const detector = new ArbitrageDetector({
-        minProfitThreshold: process.env.MIN_PROFIT_THRESHOLD || '1000000000000000', // 0.001 ETH
-        maxGasPrice: process.env.MAX_GAS_PRICE || '50000000000', // 50 gwei
-        maxSlippage: process.env.MAX_SLIPPAGE || 0.5 // 0.5%
-      });
+      const detector = new ArbitrageDetector(
+        this.container.get('aggregatorService'),
+        this.container.get('tokenManager')
+      );
       this.container.services.set('detector', detector);
 
       this.isInitialized = true;
