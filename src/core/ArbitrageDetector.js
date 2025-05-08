@@ -125,20 +125,16 @@ class ArbitrageDetector {
     // Define test amounts (consider making these configurable or dynamic)
     // Using smaller amounts first reduces risk of hitting API limits or large slippage issues initially
     const testAmountsWei = [
-      ethers.utils.parseUnits('1', tokenA.decimals),
-      ethers.utils.parseUnits('10', tokenA.decimals),
-      // ethers.utils.parseUnits('50', tokenA.decimals), // Add more amounts cautiously
+      ethers.parseUnits('1', tokenA.decimals),
+      ethers.parseUnits('10', tokenA.decimals),
+      // ethers.parseUnits('50', tokenA.decimals), // Add more amounts cautiously
     ];
 
     for (const amountInWei of testAmountsWei) {
       let quotes;
-      const amountInReadable = ethers.utils.formatUnits(amountInWei, tokenA.decimals);
+      const amountInReadable = ethers.formatUnits(amountInWei, tokenA.decimals);
       try {
         // Fetch aggregated quotes for selling tokenA to get tokenB
-        // Aggregator is expected to return quotes from various sources (DEXs, CEXs if integrated)
-        // Expected quote format: { source: string, price: string, amountOut: string, estimatedGasUsd?: number, rawQuote?: any }
-        // 'price' should represent amount of tokenB per 1 unit of tokenA (TokenB/TokenA) as a string
-        // 'amountOut' should be the total amount of tokenB received for 'amountInWei' of tokenA as a string (in wei)
         quotes = await this.aggregatorService.getQuotes({
           tokenIn: tokenAAddress,
           tokenOut: tokenBAddress,
@@ -154,7 +150,7 @@ class ArbitrageDetector {
       // Filter out invalid quotes (e.g., null price/amountOut, zero amountOut)
       const validQuotes = quotes.filter(q =>
           q && q.source && typeof q.price === 'string' && typeof q.amountOut === 'string' &&
-          ethers.BigNumber.from(q.amountOut).gt(0)
+          ethers.getBigInt(q.amountOut) > 0n
       );
 
       if (validQuotes.length < 2) {
@@ -165,19 +161,16 @@ class ArbitrageDetector {
       // Convert string prices/amounts to BigNumber for reliable comparison and calculation
       const quotesWithBigNumbers = validQuotes.map(q => ({
           ...q,
-          priceBn: ethers.utils.parseUnits(q.price, tokenB.decimals), // Price (TokenB per TokenA) scaled to TokenB decimals
-          amountOutBn: ethers.BigNumber.from(q.amountOut) // AmountOut (TokenB) in wei
+          priceBn: ethers.parseUnits(q.price, tokenB.decimals), // Price (TokenB per TokenA) scaled to TokenB decimals
+          amountOutBn: ethers.getBigInt(q.amountOut) // AmountOut (TokenB) in wei
       }));
 
-
       // Sort quotes: highest price first (best source for selling tokenA)
-      quotesWithBigNumbers.sort((a, b) => b.priceBn.sub(a.priceBn).gt(0) ? 1 : -1);
+      quotesWithBigNumbers.sort((a, b) => b.priceBn > a.priceBn ? 1 : -1);
       const bestSellQuote = quotesWithBigNumbers[0];
 
       // Sort quotes: lowest price first (best source for buying tokenA)
-      // This represents the source where selling TokenA yields the least TokenB,
-      // making it the cheapest place to acquire TokenA relative to TokenB.
-      quotesWithBigNumbers.sort((a, b) => a.priceBn.sub(b.priceBn).gt(0) ? 1 : -1);
+      quotesWithBigNumbers.sort((a, b) => a.priceBn > b.priceBn ? 1 : -1);
       const bestBuyQuote = quotesWithBigNumbers[0];
 
       // Ensure the buy and sell sources are different
@@ -189,46 +182,38 @@ class ArbitrageDetector {
       const sellPriceBn = bestSellQuote.priceBn; // Price (TokenB/TokenA) on sell source
       const buyPriceBn = bestBuyQuote.priceBn;   // Price (TokenB/TokenA) on buy source
 
-      if (buyPriceBn.isZero()) continue; // Avoid division by zero
+      if (buyPriceBn === 0n) continue; // Avoid division by zero
 
       // Calculate Profit Ratio = Sell Price / Buy Price using scaled BigNumbers for precision
-      const scaleFactor = ethers.BigNumber.from(10).pow(this.BIGNUMBER_PRECISION);
-      const sellPriceScaled = sellPriceBn.mul(scaleFactor); // Scale up sell price
-      const profitRatioScaled = sellPriceScaled.div(buyPriceBn); // Calculate ratio (scaled)
+      const scaleFactor = 10n ** BigInt(this.BIGNUMBER_PRECISION);
+      const sellPriceScaled = sellPriceBn * scaleFactor; // Scale up sell price
+      const profitRatioScaled = sellPriceScaled / buyPriceBn; // Calculate ratio (scaled)
 
       // Define the threshold ratio (1 + min_profit) scaled
-      const oneScaled = ethers.BigNumber.from(1).mul(scaleFactor);
+      const oneScaled = 1n * scaleFactor;
       // Use integer math for threshold calculation to avoid floating point issues
-      const minProfitScaled = scaleFactor.mul(Math.round(this.MIN_PROFIT_THRESHOLD * 10000)).div(10000);
-      const requiredRatioScaled = oneScaled.add(minProfitScaled);
+      const minProfitScaled = scaleFactor * BigInt(Math.round(this.MIN_PROFIT_THRESHOLD * 10000)) / 10000n;
+      const requiredRatioScaled = oneScaled + minProfitScaled;
 
       // Check if the actual profit ratio exceeds the required threshold ratio
-      if (profitRatioScaled.gt(requiredRatioScaled)) {
+      if (profitRatioScaled > requiredRatioScaled) {
         // Calculate actual profit percentage from the scaled ratio
-        const profitPercent = (parseFloat(ethers.utils.formatUnits(profitRatioScaled, this.BIGNUMBER_PRECISION)) - 1) * 100;
+        const profitPercent = (Number(ethers.formatUnits(profitRatioScaled, this.BIGNUMBER_PRECISION)) - 1) * 100;
 
         // Calculate estimated profit in TokenB
-        // Profit = Amount Received (Sell Leg) - Amount Spent (Buy Leg)
-        // Amount Received = bestSellQuote.amountOutBn (TokenB wei)
-        // Amount Spent (estimated) = amountInWei * buyPriceBn (TokenB/TokenA)
-        // Note: This estimation assumes the buyPrice is constant for amountInWei.
-        // A more accurate method would involve getting an inverse quote (TokenB -> TokenA) if available.
         const amountOutSellBn = bestSellQuote.amountOutBn;
 
         // Estimate cost to buy `amountInWei` of TokenA on the buy source using its price
-        // Cost = amountIn (TokenA) * price (TokenB/TokenA)
-        // Need to adjust for decimals: (amountInWei / 10^decA) * (buyPriceBn / 10^decB) * 10^decB
-        // Simplified: amountInWei * buyPriceBn / (10^decA)
-        const estimatedCostBuyBn = amountInWei.mul(buyPriceBn).div(ethers.BigNumber.from(10).pow(tokenA.decimals));
+        const estimatedCostBuyBn = (amountInWei * buyPriceBn) / (10n ** BigInt(tokenA.decimals));
 
         // Estimated Profit = amountOutSellBn - estimatedCostBuyBn (in TokenB wei)
-        const estimatedProfitInTokenBW = amountOutSellBn.sub(estimatedCostBuyBn);
+        const estimatedProfitInTokenBW = amountOutSellBn - estimatedCostBuyBn;
 
         // Ensure calculated profit is positive before recording
-        if (estimatedProfitInTokenBW.gt(0)) {
-          const amountOutSellReadable = ethers.utils.formatUnits(amountOutSellBn, tokenB.decimals);
-          const estimatedProfitReadable = ethers.utils.formatUnits(estimatedProfitInTokenBW, tokenB.decimals);
-          const estimatedCostBuyReadable = ethers.utils.formatUnits(estimatedCostBuyBn, tokenB.decimals);
+        if (estimatedProfitInTokenBW > 0n) {
+          const amountOutSellReadable = ethers.formatUnits(amountOutSellBn, tokenB.decimals);
+          const estimatedProfitReadable = ethers.formatUnits(estimatedProfitInTokenBW, tokenB.decimals);
+          const estimatedCostBuyReadable = ethers.formatUnits(estimatedCostBuyBn, tokenB.decimals);
 
           // Aggregate gas costs if available
           const estimatedGasUsd = (bestBuyQuote.estimatedGasUsd || 0) + (bestSellQuote.estimatedGasUsd || 0);
@@ -249,27 +234,29 @@ class ArbitrageDetector {
             },
             buyLeg: { // Action: Buy TokenA (implicitly by selling TokenB) on the 'bestBuyQuote' source
               source: bestBuyQuote.source,
-              price: ethers.utils.formatUnits(buyPriceBn, tokenB.decimals), // Price: TokenB per 1 TokenA
-              estimatedCostTokenB: estimatedCostBuyReadable, // Estimated TokenB needed
-              rawQuote: bestBuyQuote.rawQuote // Include raw quote for potential execution
+              price: ethers.formatUnits(buyPriceBn, tokenB.decimals),
+              estimatedCost: estimatedCostBuyReadable,
+              estimatedGasUsd: bestBuyQuote.estimatedGasUsd || 0,
+              rawQuote: bestBuyQuote.rawQuote
             },
-            sellLeg: { // Action: Sell TokenA on the 'bestSellQuote' source
+            sellLeg: { // Action: Sell TokenA to get TokenB on the 'bestSellQuote' source
               source: bestSellQuote.source,
-              price: ethers.utils.formatUnits(sellPriceBn, tokenB.decimals), // Price: TokenB per 1 TokenA
-              amountOutTokenB: amountOutSellReadable, // Actual TokenB received
-              rawQuote: bestSellQuote.rawQuote // Include raw quote for potential execution
+              price: ethers.formatUnits(sellPriceBn, tokenB.decimals),
+              estimatedOutput: amountOutSellReadable,
+              estimatedGasUsd: bestSellQuote.estimatedGasUsd || 0,
+              rawQuote: bestSellQuote.rawQuote
             },
             profit: {
               percentage: profitPercent,
-              estimatedProfitTokenB: estimatedProfitReadable, // Net profit in TokenB
-              profitTokenSymbol: tokenB.symbol
-            },
-            estimatedGasUsd: estimatedGasUsd > 0 ? estimatedGasUsd : null // Total estimated gas in USD
+              amount: estimatedProfitReadable,
+              amountUsd: null, // Would require price feed integration
+              estimatedGasUsd: estimatedGasUsd
+            }
           });
-          logger.info(`[ArbitrageDetector] Found Opportunity: ${tokenA.symbol}/${tokenB.symbol} (${amountInReadable} ${tokenA.symbol}) | Buy@${bestBuyQuote.source} (${ethers.utils.formatUnits(buyPriceBn, tokenB.decimals)}) / Sell@${bestSellQuote.source} (${ethers.utils.formatUnits(sellPriceBn, tokenB.decimals)}) | Profit: ${profitPercent.toFixed(3)}% (~${estimatedProfitReadable} ${tokenB.symbol})`);
+          logger.info(`[ArbitrageDetector] Found Opportunity: ${tokenA.symbol}/${tokenB.symbol} (${amountInReadable} ${tokenA.symbol}) | Buy@${bestBuyQuote.source} (${ethers.formatUnits(buyPriceBn, tokenB.decimals)}) / Sell@${bestSellQuote.source} (${ethers.formatUnits(sellPriceBn, tokenB.decimals)}) | Profit: ${profitPercent.toFixed(3)}% (~${estimatedProfitReadable} ${tokenB.symbol})`);
         } else {
              // Log if profit calculation resulted in non-positive value, indicating potential issues or fees > spread
-             // logger.debug(`[ArbitrageDetector] Non-positive estimated profit for ${tokenA.symbol}/${tokenB.symbol} between ${bestBuyQuote.source} and ${bestSellQuote.source}. Sell Amount: ${amountOutSellReadable}, Est. Buy Cost: ${ethers.utils.formatUnits(estimatedCostBuyBn, tokenB.decimals)}`);
+             // logger.debug(`[ArbitrageDetector] Non-positive estimated profit for ${tokenA.symbol}/${tokenB.symbol} between ${bestBuyQuote.source} and ${bestSellQuote.source}. Sell Amount: ${amountOutSellReadable}, Est. Buy Cost: ${ethers.formatUnits(estimatedCostBuyBn, tokenB.decimals)}`);
         }
       }
     }
