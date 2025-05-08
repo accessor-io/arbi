@@ -72,13 +72,14 @@ class ServiceContainer {
 
       const monitoringService = new MonitoringService(
         this.get('notification'),
-        this.get('scheduler')
+        this.get('scheduler'),
+        this.get('config')
       );
       await monitoringService.initialize();
       this.services.set('monitoring', monitoringService);
 
       // Initialize analytics service
-      const analyticsService = new AnalyticsService();
+      const analyticsService = new AnalyticsService(this.get('config'));
       await analyticsService.initialize();
       this.services.set('analytics', analyticsService);
 
