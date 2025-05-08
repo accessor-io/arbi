@@ -40,9 +40,30 @@ class TokenManager {
       // Add more popular tokens as needed
     ];
     
-    // Configure provider with longer timeout
-    if (this.provider && this.provider._getConnection) {
-      this.provider._getConnection().timeout = 30000; // 30 seconds
+    // Configure provider with longer timeout and retry logic
+    if (this.provider) {
+      // Set a longer timeout for all provider requests
+      this.provider.timeout = 30000; // 30 seconds
+      
+      // Add retry logic to the provider
+      const originalSend = this.provider.send;
+      this.provider.send = async (method, params) => {
+        const maxRetries = 3;
+        let lastError;
+        
+        for (let i = 0; i < maxRetries; i++) {
+          try {
+            return await originalSend.call(this.provider, method, params);
+          } catch (error) {
+            lastError = error;
+            if (i < maxRetries - 1) {
+              logger.warn(`Provider request retry ${i + 1}/${maxRetries} for ${method}: ${error.message}`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+            }
+          }
+        }
+        throw lastError;
+      };
     }
   }
 
