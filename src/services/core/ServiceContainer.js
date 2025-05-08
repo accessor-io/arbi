@@ -66,7 +66,7 @@ class ServiceContainer {
       this.services.set('execution', executionService);
 
       // Initialize monitoring services
-      const notificationService = new NotificationService();
+      const notificationService = new NotificationService(this.get('config'));
       await notificationService.initialize();
       this.services.set('notification', notificationService);
 
