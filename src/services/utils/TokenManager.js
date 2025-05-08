@@ -130,19 +130,29 @@ class TokenManager {
     try {
       const contract = new ethers.Contract(address, ERC20_ABI, this.provider);
       
-      // Use Promise.race to implement timeout
+      // Use a longer timeout for token loading
       const timeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Token load timeout')), 10000)
+        setTimeout(() => reject(new Error('Token load timeout')), 30000) // Increased to 30 seconds
       );
 
-      const [name, symbol, decimals] = await Promise.race([
-        Promise.all([
-          contract.name(),
-          contract.symbol(),
-          contract.decimals()
-        ]),
-        timeout
-      ]);
+      // Try to load token data with timeout
+      let name, symbol, decimals;
+      try {
+        [name, symbol, decimals] = await Promise.race([
+          Promise.all([
+            contract.name().catch(() => 'Unknown'),
+            contract.symbol().catch(() => '???'),
+            contract.decimals().catch(() => 18)
+          ]),
+          timeout
+        ]);
+      } catch (error) {
+        // If we get a timeout, try to load from cache or use defaults
+        logger.warn(`Timeout loading token ${address}, using fallback data`);
+        name = 'Unknown';
+        symbol = '???';
+        decimals = 18;
+      }
 
       const token = {
         address,
@@ -156,7 +166,16 @@ class TokenManager {
       return token;
     } catch (error) {
       logger.error(`Error loading token ${address}:`, error);
-      return null;
+      // Return a basic token object even on error to prevent cascading failures
+      const fallbackToken = {
+        address,
+        name: 'Unknown',
+        symbol: '???',
+        decimals: 18,
+        contract: new ethers.Contract(address, ERC20_ABI, this.provider)
+      };
+      this.tokenCache.set(address, fallbackToken);
+      return fallbackToken;
     }
   }
 
