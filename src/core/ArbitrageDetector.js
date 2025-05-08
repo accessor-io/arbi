@@ -280,8 +280,32 @@ class ArbitrageDetector {
    * @returns {Array} Sorted list of arbitrage opportunities.
    */
   getOpportunities() {
-    // Sort by profit percentage (descending)
-    return this.opportunities.sort((a, b) => b.profit.percentage - a.profit.percentage);
+    // Sort opportunities by profit percentage in descending order
+    return [...this.opportunities].sort((a, b) => b.profit.percentage - a.profit.percentage);
+  }
+
+  /**
+   * Sets the minimum profit threshold for arbitrage opportunities.
+   * @param {number} threshold - The minimum profit threshold as a percentage (e.g., 0.5 for 0.5%)
+   */
+  setMinProfitThreshold(threshold) {
+    if (typeof threshold !== 'number' || threshold < 0) {
+      throw new Error('Invalid profit threshold. Must be a non-negative number.');
+    }
+    this.MIN_PROFIT_THRESHOLD = threshold / 100; // Convert percentage to decimal
+    logger.info(`[ArbitrageDetector] Updated minimum profit threshold to ${threshold}%`);
+  }
+
+  /**
+   * Sets the maximum slippage tolerance for quotes.
+   * @param {number} slippage - The maximum slippage tolerance as a percentage (e.g., 0.5 for 0.5%)
+   */
+  setMaxSlippage(slippage) {
+    if (typeof slippage !== 'number' || slippage < 0) {
+      throw new Error('Invalid slippage. Must be a non-negative number.');
+    }
+    this.SLIPPAGE_TOLERANCE = slippage;
+    logger.info(`[ArbitrageDetector] Updated slippage tolerance to ${slippage}%`);
   }
 }
 
