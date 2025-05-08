@@ -63,6 +63,27 @@ This project visualizes the propagation of XOR differences through a sequence of
 - [XOR Operation (Wikipedia)](https://en.wikipedia.org/wiki/Exclusive_or)
 - [Cryptographic Avalanche Effect](https://en.wikipedia.org/wiki/Avalanche_effect)
 
+## 2D XOR Difference Grids: Horizontal and Vertical
+
+### What Are 2D XOR Differences?
+- **Horizontal XORs:** The standard difference table, where each value is XORed with its immediate neighbor to the right.
+- **Vertical XORs:** XORing each value with the value directly below it in the difference table (if it exists).
+- **2D Grid:** By calculating both, you create a 2D grid of differences, similar to how gradients are computed in image processing.
+
+### How to Compute
+- For each cell in the difference table:
+  - **Horizontal XOR:** `H[i][j] = Table[i][j] ^ Table[i][j+1]` (if `j+1` exists)
+  - **Vertical XOR:** `V[i][j] = Table[i][j] ^ Table[i+1][j]` (if `i+1` exists)
+
+### Why Is This Useful?
+- **Pattern Detection:** Reveals more complex structures and relationships in the data.
+- **Cryptography:** Helps analyze how information diffuses across both sequence and transformation layers.
+- **Data Analysis:** Analogous to edge detection in images, highlighting where changes are most significant.
+
+### Visualization
+- You can visualize the 2D XOR grid as a heatmap, with color intensity representing the magnitude of the XOR in each direction.
+- This provides a richer, more detailed view of how differences propagate through the data.
+
 ---
 
 *This documentation was auto-generated to help you understand and extend the XOR difference visualization project.* 
