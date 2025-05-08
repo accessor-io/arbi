@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import DexAggregator from './DexAggregator.js';
 import TokenManager from './utils/TokenManager.js';
+import AnalyticsService from './analytics/AnalyticsService.js';
 
 class RouteAggregator {
   /**
@@ -37,6 +38,18 @@ class RouteAggregator {
         }
     };
     console.log("RouteAggregator initialized with config:", this.config);
+
+    // Initialize analytics service
+    this.analyticsService = new AnalyticsService();
+    // Note: We'll initialize analytics in the initialize() method
+  }
+
+  /**
+   * Initialize the RouteAggregator and its dependencies
+   */
+  async initialize() {
+    await this.analyticsService.initialize();
+    return this;
   }
 
   /**
@@ -51,20 +64,20 @@ class RouteAggregator {
    */
   async findBestRoute(tokenIn, tokenOut, amountIn, maxHops = this.config.defaultMaxHops) {
     // --- Input Validation ---
-    if (!ethers.utils.isAddress(tokenIn) || !ethers.utils.isAddress(tokenOut)) {
+    if (!ethers.isAddress(tokenIn) || !ethers.isAddress(tokenOut)) {
         console.error("findBestRoute Error: Invalid token address provided."); return null;
     }
     // Normalize addresses for comparison and caching
-    tokenIn = ethers.utils.getAddress(tokenIn);
-    tokenOut = ethers.utils.getAddress(tokenOut);
+    tokenIn = ethers.getAddress(tokenIn);
+    tokenOut = ethers.getAddress(tokenOut);
 
     if (tokenIn === tokenOut) {
         console.warn("findBestRoute Warning: Input and output tokens are the same."); return null;
     }
     let inputAmountBN;
     try {
-        inputAmountBN = ethers.BigNumber.from(amountIn);
-        if (inputAmountBN.lte(0)) { console.error("findBestRoute Error: Amount must be positive."); return null; }
+        inputAmountBN = ethers.getBigInt(amountIn);
+        if (inputAmountBN <= 0n) { console.error("findBestRoute Error: Amount must be positive."); return null; }
     } catch (e) {
         console.error("findBestRoute Error: Invalid amountIn provided:", amountIn, e.message); return null;
     }
@@ -96,8 +109,8 @@ class RouteAggregator {
           try {
               const directPrice = await this.dexAggregator.getBestPrice(tokenIn, tokenOut, inputAmountBN);
               if (directPrice?.bestBuy?.amountOut) {
-                  const directAmountOutBN = ethers.BigNumber.from(directPrice.bestBuy.amountOut);
-                  if (directAmountOutBN.gt(0)) {
+                  const directAmountOutBN = ethers.getBigInt(directPrice.bestBuy.amountOut);
+                  if (directAmountOutBN > 0n) {
                       allRoutes.push({
                           hops: [buildHop(directPrice.bestBuy.dex, tokenIn, tokenOut, inputAmountBN, directAmountOutBN)],
                           totalAmountOut: directAmountOutBN.toString(),
@@ -124,13 +137,13 @@ class RouteAggregator {
           try {
             const hop1 = await this.dexAggregator.getBestPrice(tokenIn, intermediate1, inputAmountBN);
             if (!hop1?.bestBuy?.amountOut) continue;
-            const amountHop1Out = ethers.BigNumber.from(hop1.bestBuy.amountOut);
-            if (amountHop1Out.lte(0)) continue;
+            const amountHop1Out = ethers.getBigInt(hop1.bestBuy.amountOut);
+            if (amountHop1Out <= 0n) continue;
 
             const hop2 = await this.dexAggregator.getBestPrice(intermediate1, tokenOut, amountHop1Out);
             if (!hop2?.bestBuy?.amountOut) continue;
-            const amountHop2Out = ethers.BigNumber.from(hop2.bestBuy.amountOut);
-            if (amountHop2Out.lte(0)) continue;
+            const amountHop2Out = ethers.getBigInt(hop2.bestBuy.amountOut);
+            if (amountHop2Out <= 0n) continue;
 
             allRoutes.push({
               hops: [
@@ -155,8 +168,8 @@ class RouteAggregator {
               try {
                   const hop1 = await this.dexAggregator.getBestPrice(tokenIn, intermediate1, inputAmountBN);
                   if (hop1?.bestBuy?.amountOut) {
-                      const amountHop1Out = ethers.BigNumber.from(hop1.bestBuy.amountOut);
-                      if (amountHop1Out.gt(0)) {
+                      const amountHop1Out = ethers.getBigInt(hop1.bestBuy.amountOut);
+                      if (amountHop1Out > 0n) {
                           firstHopResults.set(intermediate1, { dex: hop1.bestBuy.dex, amountOut: amountHop1Out });
                       }
                   }
@@ -170,13 +183,13 @@ class RouteAggregator {
                   try {
                       const hop2 = await this.dexAggregator.getBestPrice(intermediate1, intermediate2, amountHop1Out);
                       if (!hop2?.bestBuy?.amountOut) continue;
-                      const amountHop2Out = ethers.BigNumber.from(hop2.bestBuy.amountOut);
-                      if (amountHop2Out.lte(0)) continue;
+                      const amountHop2Out = ethers.getBigInt(hop2.bestBuy.amountOut);
+                      if (amountHop2Out <= 0n) continue;
 
                       const hop3 = await this.dexAggregator.getBestPrice(intermediate2, tokenOut, amountHop2Out);
                       if (!hop3?.bestBuy?.amountOut) continue;
-                      const amountHop3Out = ethers.BigNumber.from(hop3.bestBuy.amountOut);
-                      if (amountHop3Out.lte(0)) continue;
+                      const amountHop3Out = ethers.getBigInt(hop3.bestBuy.amountOut);
+                      if (amountHop3Out <= 0n) continue;
 
                       allRoutes.push({
                           hops: [
@@ -195,7 +208,6 @@ class RouteAggregator {
           }
       }
 
-
       // --- 4 Hops (tokenIn -> i1 -> i2 -> i3 -> tokenOut) ---
       if (maxHops >= 4 && intermediateTokens.length > 0) {
           // Pre-calculate first and second hops to reduce redundant calls further
@@ -204,8 +216,8 @@ class RouteAggregator {
               try {
                   const hop1 = await this.dexAggregator.getBestPrice(tokenIn, intermediate1, inputAmountBN);
                   if (hop1?.bestBuy?.amountOut) {
-                      const amountHop1Out = ethers.BigNumber.from(hop1.bestBuy.amountOut);
-                      if (amountHop1Out.gt(0)) {
+                      const amountHop1Out = ethers.getBigInt(hop1.bestBuy.amountOut);
+                      if (amountHop1Out > 0n) {
                           firstHopResults.set(intermediate1, { dex: hop1.bestBuy.dex, amountOut: amountHop1Out });
                       }
                   }
@@ -219,8 +231,8 @@ class RouteAggregator {
                   try {
                       const hop2 = await this.dexAggregator.getBestPrice(intermediate1, intermediate2, hop1Result.amountOut);
                       if (hop2?.bestBuy?.amountOut) {
-                          const amountHop2Out = ethers.BigNumber.from(hop2.bestBuy.amountOut);
-                          if (amountHop2Out.gt(0)) {
+                          const amountHop2Out = ethers.getBigInt(hop2.bestBuy.amountOut);
+                          if (amountHop2Out > 0n) {
                               secondHopResults.set(`${intermediate1}-${intermediate2}`, {
                                   hop1Dex: hop1Result.dex,
                                   hop1AmountOut: hop1Result.amountOut,
@@ -243,13 +255,13 @@ class RouteAggregator {
                   try {
                       const hop3 = await this.dexAggregator.getBestPrice(intermediate2, intermediate3, amountHop2Out);
                       if (!hop3?.bestBuy?.amountOut) continue;
-                      const amountHop3Out = ethers.BigNumber.from(hop3.bestBuy.amountOut);
-                      if (amountHop3Out.lte(0)) continue;
+                      const amountHop3Out = ethers.getBigInt(hop3.bestBuy.amountOut);
+                      if (amountHop3Out <= 0n) continue;
 
                       const hop4 = await this.dexAggregator.getBestPrice(intermediate3, tokenOut, amountHop3Out);
                       if (!hop4?.bestBuy?.amountOut) continue;
-                      const amountHop4Out = ethers.BigNumber.from(hop4.bestBuy.amountOut);
-                      if (amountHop4Out.lte(0)) continue;
+                      const amountHop4Out = ethers.getBigInt(hop4.bestBuy.amountOut);
+                      if (amountHop4Out <= 0n) continue;
 
                       allRoutes.push({
                           hops: [
@@ -265,10 +277,9 @@ class RouteAggregator {
                           console.warn(`Error finding 4-hop route via ${intermediate1}->${intermediate2}->${intermediate3}: ${error.message}`);
                       }
                   }
-              } // end intermediate3 loop
-          } // end secondHopResults loop
-      } // end if maxHops >= 4
-
+              }
+          }
+      }
 
       // --- Find Best Route ---
       if (allRoutes.length === 0) {
@@ -278,19 +289,17 @@ class RouteAggregator {
       }
 
       const bestRoute = allRoutes.reduce((best, current) => {
-        const currentAmountBN = ethers.BigNumber.from(current.totalAmountOut || '0');
-        const bestAmountBN = ethers.BigNumber.from(best.totalAmountOut || '0');
-        return currentAmountBN.gt(bestAmountBN) ? current : best;
+        const currentAmountBN = ethers.getBigInt(current.totalAmountOut || '0');
+        const bestAmountBN = ethers.getBigInt(best.totalAmountOut || '0');
+        return currentAmountBN > bestAmountBN ? current : best;
       }, { totalAmountOut: '0' });
 
       // --- Calculate Profit Percentage ---
-      const outputAmountBN = ethers.BigNumber.from(bestRoute.totalAmountOut);
+      const outputAmountBN = ethers.getBigInt(bestRoute.totalAmountOut);
       bestRoute.profitPercent = 0; // Default
-      // **WARNING: Floating point math for percentage. Potential precision issues.**
-      // Assumes amounts don't need specific decimal handling for percentage calculation.
       try {
-          const outputFloat = parseFloat(ethers.utils.formatUnits(outputAmountBN, 0)); // Simplistic: formatUnits without decimals
-          const inputFloat = parseFloat(ethers.utils.formatUnits(inputAmountBN, 0));   // Simplistic: formatUnits without decimals
+          const outputFloat = Number(ethers.formatUnits(outputAmountBN, 0)); // Simplistic: formatUnits without decimals
+          const inputFloat = Number(ethers.formatUnits(inputAmountBN, 0));   // Simplistic: formatUnits without decimals
           if (!isNaN(outputFloat) && !isNaN(inputFloat) && inputFloat !== 0) {
               bestRoute.profitPercent = (outputFloat / inputFloat) - 1;
           }
@@ -328,20 +337,20 @@ class RouteAggregator {
 
     const intermediates = new Set();
     if (baseToken) {
-        try { intermediates.add(ethers.utils.getAddress(baseToken)); } catch (e) { /* ignore invalid base token */ }
+        try { intermediates.add(ethers.getAddress(baseToken)); } catch (e) { /* ignore invalid base token */ }
     }
     popularTokens.forEach(t => {
-        try { intermediates.add(ethers.utils.getAddress(t.address)); } catch (e) { /* ignore invalid popular token */ }
+        try { intermediates.add(ethers.getAddress(t.address)); } catch (e) { /* ignore invalid popular token */ }
     });
 
     // Add common stablecoins (ensure addresses are correct for the network)
     // Example: const USDC = '...'; const USDT = '...';
-    // try { intermediates.add(ethers.utils.getAddress(USDC)); } catch(e){}
-    // try { intermediates.add(ethers.utils.getAddress(USDT)); } catch(e){}
+    // try { intermediates.add(ethers.getAddress(USDC)); } catch(e){}
+    // try { intermediates.add(ethers.getAddress(USDT)); } catch(e){}
 
     // Ensure input and output tokens (checksummed) are not included
-    const checksumIn = ethers.utils.getAddress(tokenIn);
-    const checksumOut = ethers.utils.getAddress(tokenOut);
+    const checksumIn = ethers.getAddress(tokenIn);
+    const checksumOut = ethers.getAddress(tokenOut);
     intermediates.delete(checksumIn);
     intermediates.delete(checksumOut);
 
@@ -365,13 +374,13 @@ class RouteAggregator {
     // --- Input Validation ---
      let initialAmountBN;
      try {
-         initialAmountBN = ethers.BigNumber.from(startAmount);
-         if (initialAmountBN.lte(0)) { console.error("findArbitrageOpportunities Error: startAmount must be positive."); return []; }
+         initialAmountBN = ethers.getBigInt(startAmount);
+         if (initialAmountBN <= 0n) { console.error("findArbitrageOpportunities Error: startAmount must be positive."); return []; }
      } catch (e) {
          console.error("findArbitrageOpportunities Error: Invalid startAmount:", startAmount, e.message); return [];
      }
      try {
-         startToken = ethers.utils.getAddress(startToken); // Normalize start token address
+         startToken = ethers.getAddress(startToken); // Normalize start token address
      } catch (e) {
          console.error("findArbitrageOpportunities Error: Invalid startToken address."); return [];
      }
@@ -394,7 +403,7 @@ class RouteAggregator {
         for (const intermediateTokenInfo of checkTokens) {
             let tokenB;
             try {
-                tokenB = ethers.utils.getAddress(intermediateTokenInfo.address); // Normalize intermediate token
+                tokenB = ethers.getAddress(intermediateTokenInfo.address); // Normalize intermediate token
             } catch(e) { continue; } // Skip invalid intermediate addresses
 
             if (tokenB === startToken || checkedIntermediates.has(tokenB)) {
@@ -408,22 +417,22 @@ class RouteAggregator {
             const routeAB = await this.findBestRoute(startToken, tokenB, initialAmountBN.toString(), maxHops);
 
             if (routeAB?.totalAmountOut) {
-                const amountB_BN = ethers.BigNumber.from(routeAB.totalAmountOut);
-                if (amountB_BN.lte(0)) continue;
+                const amountB_BN = ethers.getBigInt(routeAB.totalAmountOut);
+                if (amountB_BN <= 0n) continue;
 
                 // --- Second leg: tokenB -> startToken ---
                 const routeBA = await this.findBestRoute(tokenB, startToken, amountB_BN.toString(), maxHops);
 
                 if (routeBA?.totalAmountOut) {
-                    const finalAmountA_BN = ethers.BigNumber.from(routeBA.totalAmountOut);
+                    const finalAmountA_BN = ethers.getBigInt(routeBA.totalAmountOut);
 
                     // --- Check for Profit ---
-                    if (finalAmountA_BN.gt(initialAmountBN)) {
+                    if (finalAmountA_BN > initialAmountBN) {
                         // Calculate profit percentage (using floating point - see warning)
                         let profitPercent = 0;
                         try {
-                            const finalFloat = parseFloat(ethers.utils.formatUnits(finalAmountA_BN, 0)); // Simplistic
-                            const initialFloat = parseFloat(ethers.utils.formatUnits(initialAmountBN, 0)); // Simplistic
+                            const finalFloat = Number(ethers.formatUnits(finalAmountA_BN, 0)); // Simplistic
+                            const initialFloat = Number(ethers.formatUnits(initialAmountBN, 0)); // Simplistic
                              if (!isNaN(finalFloat) && !isNaN(initialFloat) && initialFloat !== 0) {
                                 profitPercent = (finalFloat / initialFloat) - 1;
                             }
@@ -483,8 +492,8 @@ class RouteAggregator {
       for (const hop of route.hops) {
         quotes.push({
           source: hop.dex,
-          price: ethers.utils.formatUnits(
-            ethers.BigNumber.from(hop.amountOut).mul(ethers.BigNumber.from(10).pow(18)).div(ethers.BigNumber.from(hop.amountIn)),
+          price: ethers.formatUnits(
+            ethers.getBigInt(hop.amountOut).mul(ethers.getBigInt(10).pow(18)).div(ethers.getBigInt(hop.amountIn)),
             18
           ), // Price as TokenB/TokenA
           amountOut: hop.amountOut,
