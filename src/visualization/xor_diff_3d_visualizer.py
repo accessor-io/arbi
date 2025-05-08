@@ -48,24 +48,33 @@ def compute_2d_xor_grids(table):
             vertical_grid[i, j] = table[i][j] ^ table[i+1][j]
     return horizontal_grid, vertical_grid
 
-def plot_3d_xor_grids(horizontal_grid, vertical_grid):
+def plot_3d_xor_grids(horizontal_grid, vertical_grid, log_scale=False, suffix=""):
     fig = plt.figure(figsize=(18, 10))
     ax = fig.add_subplot(111, projection='3d')
-    # Horizontal grid
+    # Prepare data
     X, Y = np.meshgrid(np.arange(horizontal_grid.shape[1]), np.arange(horizontal_grid.shape[0]))
-    ax.plot_surface(X, Y, np.nan_to_num(horizontal_grid), cmap='viridis', alpha=0.7)
-    # Vertical grid (shift Y by 0.5 for visual separation)
     Xv, Yv = np.meshgrid(np.arange(vertical_grid.shape[1]), np.arange(vertical_grid.shape[0]))
-    ax.plot_surface(Xv, Yv+0.5, np.nan_to_num(vertical_grid), cmap='magma', alpha=0.7)
-    ax.set_title('3D XOR Difference Visualization (Horizontal + Vertical)')
+    Z_h = np.nan_to_num(horizontal_grid)
+    Z_v = np.nan_to_num(vertical_grid)
+    if log_scale:
+        Z_h = np.log1p(Z_h)
+        Z_v = np.log1p(Z_v)
+    # Plot surfaces
+    ax.plot_surface(X, Y, Z_h, cmap='viridis', alpha=0.7)
+    ax.plot_surface(Xv, Yv+0.5, Z_v, cmap='magma', alpha=0.7)
+    ax.set_title(f'3D XOR Difference Visualization (Horizontal + Vertical){" [Log Scale]" if log_scale else ""}')
     ax.set_xlabel('Position')
     ax.set_ylabel('Level')
-    ax.set_zlabel('XOR Value')
+    ax.set_zlabel('XOR Value' + (" (log1p)" if log_scale else ""))
     plt.tight_layout()
-    plt.savefig('xor_diff_3d_visualization.png')
+    # Save from multiple angles
+    for angle, elev in [(45, 30), (90, 90), (135, 45), (180, 60)]:
+        ax.view_init(elev=elev, azim=angle)
+        plt.savefig(f'xor_diff_3d_visualization{suffix}_az{angle}_el{elev}{"_log" if log_scale else ""}.png')
     plt.close()
 
 if __name__ == "__main__":
     table = build_difference_table()
     horizontal_grid, vertical_grid = compute_2d_xor_grids(table)
-    plot_3d_xor_grids(horizontal_grid, vertical_grid) 
+    plot_3d_xor_grids(horizontal_grid, vertical_grid, log_scale=False, suffix="")
+    plot_3d_xor_grids(horizontal_grid, vertical_grid, log_scale=True, suffix="") 
