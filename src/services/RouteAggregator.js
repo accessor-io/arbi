@@ -457,6 +457,48 @@ class RouteAggregator {
       return [];
     }
   }
+
+  /**
+   * Gets quotes from multiple sources for a token swap.
+   * This method adapts the RouteAggregator's interface to match what ArbitrageDetector expects.
+   * @param {object} params Parameters for the quote request
+   * @param {string} params.tokenIn Address of the input token
+   * @param {string} params.tokenOut Address of the output token
+   * @param {string} params.amountIn Amount of input token in wei
+   * @param {number} params.slippagePercentage Maximum allowed slippage percentage
+   * @returns {Promise<Array>} Array of quotes from different sources
+   */
+  async getQuotes({ tokenIn, tokenOut, amountIn, slippagePercentage }) {
+    try {
+      // Get the best route using our existing method
+      const route = await this.findBestRoute(tokenIn, tokenOut, amountIn);
+      if (!route) {
+        return [];
+      }
+
+      // Convert the route into the expected quote format
+      const quotes = [];
+      
+      // Add quote for each hop in the route
+      for (const hop of route.hops) {
+        quotes.push({
+          source: hop.dex,
+          price: ethers.utils.formatUnits(
+            ethers.BigNumber.from(hop.amountOut).mul(ethers.BigNumber.from(10).pow(18)).div(ethers.BigNumber.from(hop.amountIn)),
+            18
+          ), // Price as TokenB/TokenA
+          amountOut: hop.amountOut,
+          estimatedGasUsd: null, // We don't have gas estimates in the current implementation
+          rawQuote: hop // Include the raw hop data for potential execution
+        });
+      }
+
+      return quotes;
+    } catch (error) {
+      console.error('Error getting quotes:', error);
+      return [];
+    }
+  }
 }
 
 export default RouteAggregator;
