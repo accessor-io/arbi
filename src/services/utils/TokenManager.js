@@ -39,6 +39,11 @@ class TokenManager {
       { address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', symbol: 'WBTC' },
       // Add more popular tokens as needed
     ];
+    
+    // Configure provider with longer timeout
+    if (this.provider && this.provider._getConnection) {
+      this.provider._getConnection().timeout = 30000; // 30 seconds
+    }
   }
 
   async initialize() {
@@ -49,20 +54,20 @@ class TokenManager {
       const chainId = (await this.provider.getNetwork()).chainId.toString();
       const baseTokenAddress = this.getBaseTokenAddress(chainId);
       if (baseTokenAddress) {
-        await this.loadToken(baseTokenAddress);
+        await this.loadTokenWithRetry(baseTokenAddress);
       }
 
       // Preload popular tokens
       for (const token of this.popularTokens) {
-        await this.loadToken(token.address);
+        await this.loadTokenWithRetry(token.address);
       }
 
       // Preload common pairs
       const commonPairs = this.getCommonPairs();
       for (const pair of commonPairs) {
         await Promise.all([
-          this.loadToken(pair.base),
-          this.loadToken(pair.quote)
+          this.loadTokenWithRetry(pair.base),
+          this.loadTokenWithRetry(pair.quote)
         ]);
       }
 
@@ -72,6 +77,24 @@ class TokenManager {
       logger.error('Failed to initialize TokenManager:', error);
       throw error;
     }
+  }
+
+  async loadTokenWithRetry(address, maxRetries = 3, delay = 1000) {
+    let lastError;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const token = await this.loadToken(address);
+        if (token) return token;
+      } catch (error) {
+        lastError = error;
+        if (i < maxRetries - 1) {
+          logger.warn(`Retry ${i + 1}/${maxRetries} loading token ${address}: ${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, delay * (i + 1))); // Exponential backoff
+        }
+      }
+    }
+    logger.error(`Failed to load token ${address} after ${maxRetries} retries:`, lastError);
+    return null;
   }
 
   getBaseTokenAddress(chainId = '1') {
@@ -85,10 +108,19 @@ class TokenManager {
 
     try {
       const contract = new ethers.Contract(address, ERC20_ABI, this.provider);
-      const [name, symbol, decimals] = await Promise.all([
-        contract.name(),
-        contract.symbol(),
-        contract.decimals()
+      
+      // Use Promise.race to implement timeout
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Token load timeout')), 10000)
+      );
+
+      const [name, symbol, decimals] = await Promise.race([
+        Promise.all([
+          contract.name(),
+          contract.symbol(),
+          contract.decimals()
+        ]),
+        timeout
       ]);
 
       const token = {
@@ -102,7 +134,7 @@ class TokenManager {
       this.tokenCache.set(address, token);
       return token;
     } catch (error) {
-      console.error(`Error loading token ${address}:`, error);
+      logger.error(`Error loading token ${address}:`, error);
       return null;
     }
   }
