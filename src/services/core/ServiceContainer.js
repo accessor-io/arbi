@@ -8,6 +8,8 @@ import MonitoringService from '../monitoring/MonitoringService.js';
 import NotificationService from '../monitoring/NotificationService.js';
 import AnalyticsService from '../analytics/AnalyticsService.js';
 import SecurityService from '../security/SecurityService.js';
+import RouteAggregator from '../RouteAggregator.js';
+import { providers } from '../../config/network.js';
 
 class ServiceContainer {
   constructor() {
@@ -43,6 +45,17 @@ class ServiceContainer {
       );
       await executionService.initialize();
       this.services.set('execution', executionService);
+
+      // Initialize route aggregator
+      const routeAggregator = new RouteAggregator(providers.mainnet, {
+        cacheTimeoutMs: configService.get('aggregator.cacheTimeoutMs', 30000),
+        defaultMaxHops: configService.get('aggregator.defaultMaxHops', 4),
+        arbitrage: {
+          minProfitThreshold: configService.get('arbitrage.minProfit', 0.001),
+          topTokensToCheck: configService.get('arbitrage.topTokensToCheck', 20)
+        }
+      });
+      this.services.set('aggregator', routeAggregator);
 
       // Initialize arbitrage service
       const arbitrageService = new ArbitrageService(
@@ -88,8 +101,10 @@ class ServiceContainer {
   async cleanup() {
     for (const [name, service] of this.services) {
       try {
-        await service.cleanup();
-        logger.info(`Service cleaned up: ${name}`);
+        if (typeof service.cleanup === 'function') {
+          await service.cleanup();
+          logger.info(`Service cleaned up: ${name}`);
+        }
       } catch (error) {
         logger.error(`Failed to cleanup service ${name}:`, error);
       }
