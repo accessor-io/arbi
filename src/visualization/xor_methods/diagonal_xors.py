@@ -1,0 +1,82 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+
+# Input data (same as before)
+KH = ["0x1", "0x3", "0x7", "0x8", "0x15", "0x31", "0x4C", "0xE0", "0x1D3", "0x202",
+      "0x483", "0xA7B", "0x1460", "0x2930", "0x68f3", "0xc936", "0x1764f", "0x3080d",
+      "0x57491", "0xd2c55", "0x1ba534", "0x2de40f", "0xc2a04", "0x1fa5ee5", "0x340326e",
+      "0x6ac3875", "0xd916ce8", "0x172551f", "0xd94cd64", "0x7d4fe747", "0x862a62e",
+      "0x1a96ca8d8", "0x966200", "0x34a03911d", "0x4aed21170", "0xde820a7c",
+      "0x17577a36a", "0x22382fecd", "0x465f83ee2", "0x9e4933dd0", "0x153859acc5b",
+      "0x221c58d8f", "0x3b627c591", "0x2b335a0f", "0x12fca143c05", "0x2ec18388d544",
+      "0x61cb533cba", "0xade6d7ce3b9b", "0x174176b01f54d", "0x2bd43c2e9354",
+      "0x75070a1a309d4", "0x8efae164cb9e3c", "0x185788e47e326c", "0x236f6d3ad1f43",
+      "0x1f5bf87e67e114", "0x18b63ac4ffdf", "0x1eb25c90795d61c", "0x2b79852183a21",
+      "0x7436cbb87cab44f", "0xfc07a1182367bbe", "0x13c96a3742f64906",
+      "0x363d541eb611abee", "0x7cce5efdaccf6808", "0x70f1127b09112d4",
+      "0x1a838b13505b26867", "0x2832ed74f2b5e35ee", "0x730fc232c1942c1ac",
+      "0x6ebb3940cd6c1491", "0x101d83275f2bc7e0c", "0x349b84b6431a6c4f1"]
+
+def hex_xor(a, b):
+    return int(a, 16) ^ int(b, 16)
+
+def build_difference_table():
+    table = []
+    current_level = list(KH)
+    table.append([int(x, 16) for x in current_level])
+    while len(current_level) > 1:
+        next_level = []
+        for i in range(len(current_level) - 1):
+            diff = hex_xor(current_level[i], current_level[i + 1])
+            next_level.append(hex(diff))
+        if not next_level:
+            break
+        table.append([int(x, 16) for x in next_level])
+        current_level = next_level
+    return table
+
+def diagonal_xor_main(table):
+    # Top-left to bottom-right
+    rows = len(table)
+    cols = len(table[0])
+    diag_grid = np.full((rows, cols), np.nan)
+    for i in range(rows):
+        for j in range(cols):
+            if i + j < cols and i < len(table) and j < len(table[i]):
+                diag_xor = table[i][j]
+                if i+1 < len(table) and j+1 < len(table[i+1]):
+                    diag_xor ^= table[i+1][j+1]
+                diag_grid[i, j] = diag_xor
+    return diag_grid
+
+def diagonal_xor_anti(table):
+    # Top-right to bottom-left
+    rows = len(table)
+    cols = len(table[0])
+    diag_grid = np.full((rows, cols), np.nan)
+    for i in range(rows):
+        for j in range(cols):
+            if j-i >= 0 and i < len(table) and j < len(table[i]):
+                diag_xor = table[i][j]
+                if i+1 < len(table) and j-1 >= 0 and j-1 < len(table[i+1]):
+                    diag_xor ^= table[i+1][j-1]
+                diag_grid[i, j] = diag_xor
+    return diag_grid
+
+def plot_diagonal_xor(grid, title, filename):
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(grid, cmap='coolwarm', annot=False)
+    plt.title(title)
+    plt.xlabel('Position')
+    plt.ylabel('Level')
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
+
+if __name__ == "__main__":
+    table = build_difference_table()
+    main_diag = diagonal_xor_main(table)
+    anti_diag = diagonal_xor_anti(table)
+    plot_diagonal_xor(main_diag, 'Main Diagonal XOR (Top-Left to Bottom-Right)', 'diagonal_xor_main.png')
+    plot_diagonal_xor(anti_diag, 'Anti-Diagonal XOR (Top-Right to Bottom-Left)', 'diagonal_xor_anti.png') 
