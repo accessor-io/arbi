@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import argparse
+import imageio
+import os
 
 # Input data
 KH = ["0x1", "0x3", "0x7", "0x8", "0x15", "0x31", "0x4C", "0xE0", "0x1D3", "0x202",
@@ -48,38 +51,113 @@ def compute_2d_xor_grids(table):
             vertical_grid[i, j] = table[i][j] ^ table[i+1][j]
     return horizontal_grid, vertical_grid
 
-def sliding_window_xor(horizontal_grid, vertical_grid, window_size=2):
-    rows, cols = horizontal_grid.shape
-    vrows, vcols = vertical_grid.shape
-    out_rows = min(rows, vrows) - window_size + 1
-    out_cols = min(cols, vcols) - window_size + 1
+def sliding_window_xor(grid1, grid2=None, window_size=2, mode='both', log_scale=False):
+    rows, cols = grid1.shape
+    if grid2 is not None:
+        vrows, vcols = grid2.shape
+        out_rows = min(rows, vrows) - window_size + 1
+        out_cols = min(cols, vcols) - window_size + 1
+    else:
+        out_rows = rows - window_size + 1
+        out_cols = cols - window_size + 1
     output_grid = np.zeros((out_rows, out_cols))
     for i in range(out_rows):
         for j in range(out_cols):
             xor_val = 0
             for wi in range(window_size):
                 for wj in range(window_size):
-                    h_val = horizontal_grid[i + wi, j + wj]
-                    v_val = vertical_grid[i + wi, j + wj]
+                    if mode == 'both':
+                        h_val = grid1[i + wi, j + wj]
+                        v_val = grid2[i + wi, j + wj] if grid2 is not None else 0
+                        if not np.isnan(h_val):
+                            xor_val ^= int(h_val)
+                        if not np.isnan(v_val):
+                            xor_val ^= int(v_val)
+                    elif mode == 'horizontal':
+                        h_val = grid1[i + wi, j + wj]
+                        if not np.isnan(h_val):
+                            xor_val ^= int(h_val)
+                    elif mode == 'vertical':
+                        v_val = grid1[i + wi, j + wj]
+                        if not np.isnan(v_val):
+                            xor_val ^= int(v_val)
+            output_grid[i, j] = xor_val
+    if log_scale:
+        output_grid = np.log1p(np.abs(output_grid))
+    return output_grid
+
+def plot_sliding_window_xor(output_grid, title, filename):
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(output_grid, cmap='coolwarm', annot=False)
+    plt.title(title)
+    plt.xlabel('Position')
+    plt.ylabel('Level')
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
+
+def animate_sliding_window(grid1, grid2, window_size=2, mode='both', log_scale=False, out_gif='xor_diff_sliding_window_anim.gif'):
+    rows, cols = grid1.shape
+    vrows, vcols = grid2.shape
+    out_rows = min(rows, vrows) - window_size + 1
+    out_cols = min(cols, vcols) - window_size + 1
+    images = []
+    for i in range(out_rows):
+        for j in range(out_cols):
+            xor_val = 0
+            for wi in range(window_size):
+                for wj in range(window_size):
+                    h_val = grid1[i + wi, j + wj]
+                    v_val = grid2[i + wi, j + wj]
                     if not np.isnan(h_val):
                         xor_val ^= int(h_val)
                     if not np.isnan(v_val):
                         xor_val ^= int(v_val)
-            output_grid[i, j] = xor_val
-    return output_grid
+            frame = np.zeros((out_rows, out_cols))
+            frame[i, j] = np.log1p(np.abs(xor_val)) if log_scale else xor_val
+            plt.figure(figsize=(6, 4))
+            sns.heatmap(frame, cmap='coolwarm', cbar=False)
+            plt.title(f'Sliding Window XOR at ({i},{j})')
+            plt.tight_layout()
+            fname = f'_frame_{i}_{j}.png'
+            plt.savefig(fname)
+            plt.close()
+            images.append(imageio.imread(fname))
+            os.remove(fname)
+    imageio.mimsave(out_gif, images, duration=0.1)
 
-def plot_sliding_window_xor(output_grid):
-    plt.figure(figsize=(12, 8))
-    sns.heatmap(output_grid, cmap='coolwarm', annot=False)
-    plt.title('Sliding Window XOR (2x2) of Horizontal and Vertical Grids')
-    plt.xlabel('Position')
-    plt.ylabel('Level')
-    plt.tight_layout()
-    plt.savefig('xor_diff_sliding_window_heatmap.png')
-    plt.close()
+def print_stats(output_grid, label):
+    print(f"{label} - Mean: {np.mean(output_grid):.2e}, Variance: {np.var(output_grid):.2e}, Max: {np.max(output_grid):.2e}, Min: {np.min(output_grid):.2e}")
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(description='Sliding window XOR between horizontal and vertical difference grids.')
+    parser.add_argument('--window', type=int, default=2, help='Sliding window size (default: 2)')
+    parser.add_argument('--log', action='store_true', help='Apply log scale to output')
+    parser.add_argument('--animate', action='store_true', help='Create animation GIF of sliding window')
+    args = parser.parse_args()
+
     table = build_difference_table()
     horizontal_grid, vertical_grid = compute_2d_xor_grids(table)
-    output_grid = sliding_window_xor(horizontal_grid, vertical_grid, window_size=2)
-    plot_sliding_window_xor(output_grid) 
+
+    # Both
+    output_both = sliding_window_xor(horizontal_grid, vertical_grid, window_size=args.window, mode='both', log_scale=args.log)
+    plot_sliding_window_xor(output_both, f'Sliding Window XOR ({args.window}x{args.window}) Both', f'xor_diff_sliding_window_both_{args.window}x{args.window}{"_log" if args.log else ""}.png')
+    print_stats(output_both, 'Both')
+
+    # Horizontal only
+    output_h = sliding_window_xor(horizontal_grid, window_size=args.window, mode='horizontal', log_scale=args.log)
+    plot_sliding_window_xor(output_h, f'Sliding Window XOR ({args.window}x{args.window}) Horizontal Only', f'xor_diff_sliding_window_horizontal_{args.window}x{args.window}{"_log" if args.log else ""}.png')
+    print_stats(output_h, 'Horizontal Only')
+
+    # Vertical only
+    output_v = sliding_window_xor(vertical_grid, window_size=args.window, mode='vertical', log_scale=args.log)
+    plot_sliding_window_xor(output_v, f'Sliding Window XOR ({args.window}x{args.window}) Vertical Only', f'xor_diff_sliding_window_vertical_{args.window}x{args.window}{"_log" if args.log else ""}.png')
+    print_stats(output_v, 'Vertical Only')
+
+    # Animation
+    if args.animate:
+        animate_sliding_window(horizontal_grid, vertical_grid, window_size=args.window, log_scale=args.log)
+        print('Animation saved as xor_diff_sliding_window_anim.gif')
+
+if __name__ == "__main__":
+    main() 
