@@ -114,7 +114,7 @@ def animate_sliding_window(grid1, grid2, window_size=2, mode='both', log_scale=F
                     if not np.isnan(v_val):
                         xor_val ^= int(v_val)
             frame = np.zeros((out_rows, out_cols))
-            frame[i, j] = np.log1p(np.abs(xor_val)) if log_scale else xor_val
+            frame[i, j] = float(np.log1p(abs(xor_val))) if log_scale else float(xor_val)
             plt.figure(figsize=(6, 4))
             sns.heatmap(frame, cmap='coolwarm', cbar=False)
             plt.title(f'Sliding Window XOR at ({i},{j})')
