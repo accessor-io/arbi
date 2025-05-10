@@ -148,6 +148,11 @@ class PancakeSwapDex extends BaseDex {
       throw error;
     }
   }
+
+  async getPairs() {
+    console.warn('getPairs not implemented for PancakeSwapDex');
+    return [];
+  }
 }
 
 export default PancakeSwapDex; 

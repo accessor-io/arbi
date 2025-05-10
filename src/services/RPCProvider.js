@@ -16,8 +16,23 @@ class RPCProvider {
         timeout: 30000,
         pollingInterval: 4000
       },
-      ...config
+      bsc: {
+        primary: 'https://bsc-dataseed.binance.org/',
+        fallback: 'https://rpc.ankr.com/bsc',
+        timeout: 30000,
+        pollingInterval: 4000
+      }
     };
+
+    // Only override known networks
+    for (const net of ['ethereum', 'arbitrum', 'bsc']) {
+      if (config[net]) {
+        this.config[net] = { ...this.config[net], ...config[net] };
+      }
+    }
+
+    // Debug: Print config at construction
+    console.log('RPCProvider constructor config:', this.config);
 
     this.providers = new Map();
     this.activeProviders = new Map();
@@ -26,12 +41,14 @@ class RPCProvider {
 
   async initialize() {
     try {
-      // Initialize Ethereum provider
-      await this.initializeProvider('ethereum');
-      
-      // Initialize Arbitrum provider
-      await this.initializeProvider('arbitrum');
-      
+      // Debug: Print the full config object
+      logger.info('RPCProvider config object:', JSON.stringify(this.config, null, 2));
+      // Initialize all networks present in config
+      for (const network of Object.keys(this.config)) {
+        await this.initializeProvider(network);
+      }
+      // Debug: Print the activeProviders map keys
+      logger.info('Active providers after initialization:', Array.from(this.activeProviders.keys()));
       logger.info('RPC providers initialized successfully');
     } catch (error) {
       logger.error('Failed to initialize RPC providers:', error);
@@ -49,12 +66,20 @@ class RPCProvider {
       // Initialize primary provider
       const primaryProvider = new ethers.providers.JsonRpcProvider(networkConfig.primary);
       primaryProvider.timeout = networkConfig.timeout;
-      primaryProvider.pollingInterval = networkConfig.pollingInterval;
+      if (Number.isInteger(networkConfig.pollingInterval) && networkConfig.pollingInterval > 0) {
+        primaryProvider.pollingInterval = networkConfig.pollingInterval;
+      } else {
+        primaryProvider.pollingInterval = 4000;
+      }
 
       // Initialize fallback provider
       const fallbackProvider = new ethers.providers.JsonRpcProvider(networkConfig.fallback);
       fallbackProvider.timeout = networkConfig.timeout;
-      fallbackProvider.pollingInterval = networkConfig.pollingInterval;
+      if (Number.isInteger(networkConfig.pollingInterval) && networkConfig.pollingInterval > 0) {
+        fallbackProvider.pollingInterval = networkConfig.pollingInterval;
+      } else {
+        fallbackProvider.pollingInterval = 4000;
+      }
 
       // Store providers
       this.providers.set(network, {

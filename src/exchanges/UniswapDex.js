@@ -148,6 +148,11 @@ class UniswapDex extends BaseDex {
       throw error;
     }
   }
+
+  async getPairs() {
+    console.warn('getPairs not implemented for UniswapDex');
+    return [];
+  }
 }
 
 export default UniswapDex; 

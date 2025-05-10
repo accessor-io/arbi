@@ -40,7 +40,7 @@ class RouteAggregator {
     console.log("RouteAggregator initialized with config:", this.config);
 
     // Initialize analytics service
-    this.analyticsService = new AnalyticsService();
+    this.analyticsService = new AnalyticsService(config.configService);
     // Note: We'll initialize analytics in the initialize() method
   }
 
@@ -477,34 +477,41 @@ class RouteAggregator {
    * @param {number} params.slippagePercentage Maximum allowed slippage percentage
    * @returns {Promise<Array>} Array of quotes from different sources
    */
-  async getQuotes({ tokenIn, tokenOut, amountIn, slippagePercentage }) {
+  async getQuotes(params) {
     try {
-      // Get the best route using our existing method
-      const route = await this.findBestRoute(tokenIn, tokenOut, amountIn);
-      if (!route) {
-        return [];
-      }
-
-      // Convert the route into the expected quote format
-      const quotes = [];
+      const { tokenIn, tokenOut, amountIn, slippagePercentage } = params;
       
-      // Add quote for each hop in the route
-      for (const hop of route.hops) {
-        quotes.push({
-          source: hop.dex,
-          price: ethers.formatUnits(
-            ethers.getBigInt(hop.amountOut).mul(ethers.getBigInt(10).pow(18)).div(ethers.getBigInt(hop.amountIn)),
-            18
-          ), // Price as TokenB/TokenA
-          amountOut: hop.amountOut,
-          estimatedGasUsd: null, // We don't have gas estimates in the current implementation
-          rawQuote: hop // Include the raw hop data for potential execution
-        });
+      // Validate inputs
+      if (!tokenIn || !tokenOut || !amountIn) {
+        throw new Error('Missing required parameters for getQuotes');
       }
 
-      return quotes;
+      // Get quotes from all DEXes
+      const quotes = await Promise.all(
+        Array.from(this.dexAggregator.dexes.values()).map(async (dex) => {
+          try {
+            const quote = await dex.getSwapQuote(tokenIn, tokenOut, amountIn);
+            if (quote) {
+              return {
+                source: dex.name,
+                price: quote.price,
+                amountOut: quote.amountOut,
+                path: quote.path || [tokenIn, tokenOut],
+                gasEstimate: quote.gasEstimate || '0'
+              };
+            }
+            return null;
+          } catch (error) {
+            console.warn(`Error getting quote from ${dex.name}:`, error.message);
+            return null;
+          }
+        })
+      );
+
+      // Filter out null quotes and return valid ones
+      return quotes.filter(q => q !== null);
     } catch (error) {
-      console.error('Error getting quotes:', error);
+      console.error('Error in getQuotes:', error);
       return [];
     }
   }

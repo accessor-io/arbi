@@ -14,11 +14,7 @@ class ServiceContainer {
     }
 
     try {
-      // Initialize RPC provider
-      const rpcProvider = new RPCProvider();
-      await rpcProvider.initialize();
-      this.setService('rpcProvider', rpcProvider);
-
+      // Remove RPCProvider initialization
       this.isInitialized = true;
       logger.info('Service container initialized successfully');
     } catch (error) {
@@ -41,12 +37,7 @@ class ServiceContainer {
 
   async cleanup() {
     try {
-      // Cleanup RPC provider
-      const rpcProvider = this.services.get('rpcProvider');
-      if (rpcProvider) {
-        rpcProvider.cleanup();
-      }
-
+      // Remove RPCProvider cleanup
       // Clear all services
       this.services.clear();
       this.isInitialized = false;

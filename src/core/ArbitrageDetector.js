@@ -1,4 +1,5 @@
-import { ethers } from 'ethers'; // Use ES6 import
+import pkg from 'ethers';
+const { ethers, parseUnits } = pkg;
 import { logger } from '../utils/logger.js';
 import { BigNumber } from 'ethers';
 import { ERRORS, DEFAULTS } from '../constants/index.js';
@@ -131,13 +132,13 @@ export default class ArbitrageDetector extends IService {
 
     // Define test amounts
     const testAmountsWei = [
-      ethers.parseUnits('1', tokenA.decimals),
-      ethers.parseUnits('10', tokenA.decimals)
+      ethers.utils.parseUnits('1', tokenA.decimals),
+      ethers.utils.parseUnits('10', tokenA.decimals)
     ];
 
     for (const amountInWei of testAmountsWei) {
       let quotes;
-      const amountInReadable = ethers.formatUnits(amountInWei, tokenA.decimals);
+      const amountInReadable = ethers.utils.formatUnits(amountInWei, tokenA.decimals);
       try {
         quotes = await this.aggregatorService.getQuotes({
           tokenIn: tokenAAddress,
@@ -261,5 +262,14 @@ export default class ArbitrageDetector extends IService {
       },
       lastUpdate: new Date()
     };
+  }
+
+  async scanForCommonPairs() {
+    const commonPairs = this.tokenManager.getCommonPairs(10); // Scan for 10 pairs
+    logger.info(`[ArbitrageDetector] Starting scan for ${commonPairs.length} common pairs.`);
+    for (const pair of commonPairs) {
+      await this.analyzeTokenPair(pair.token0, pair.token1);
+    }
+    logger.info(`[ArbitrageDetector] Scan complete. Found ${this.opportunities.length} potential opportunities.`);
   }
 }

@@ -106,11 +106,14 @@ class BaseDex {
     if (!provider) {
       throw new Error('Provider is required');
     }
-    
-    // Initialize RPC provider if not provided
-    this.rpcProvider = provider instanceof RPCProvider ? provider : new RPCProvider(config);
-    this.provider = this.rpcProvider.getProvider(config.network || 'ethereum');
-    
+    // Use the provider directly if it's not an RPCProvider
+    if (provider instanceof RPCProvider) {
+      this.rpcProvider = provider;
+      this.provider = this.rpcProvider.getProvider(config.network || 'ethereum');
+    } else {
+      this.rpcProvider = null;
+      this.provider = provider;
+    }
     this.config = {
       routerAddress: config.routerAddress,
       factoryAddress: config.factoryAddress,
@@ -119,7 +122,6 @@ class BaseDex {
       network: config.network || 'ethereum',
       ...config
     };
-    
     this.routerContract = null;
     this.abiLoaded = false;
     this.contracts = new Map();

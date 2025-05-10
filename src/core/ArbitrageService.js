@@ -4,6 +4,7 @@ import Sushiswap from '../exchanges/SushiSwap.js';
 import TokenManager from '../services/utils/TokenManager.js';
 import ArbitrageDetector from './ArbitrageDetector.js';
 import ArbitrageExecutor from './ArbitrageExecutor.js';
+import RouteAggregator from '../services/RouteAggregator.js';
 
 class ArbitrageService {
   constructor() {
@@ -14,7 +15,8 @@ class ArbitrageService {
       // Add more exchanges as needed
     ];
     this.tokenManager = new TokenManager(this.provider);
-    this.detector = new ArbitrageDetector(this.exchanges, this.tokenManager);
+    this.routeAggregator = new RouteAggregator(this.provider);
+    this.detector = new ArbitrageDetector(this.routeAggregator, this.tokenManager);
     this.executor = new ArbitrageExecutor(this.exchanges, this.tokenManager);
     this.isScanning = false;
     this.scanInterval = null;

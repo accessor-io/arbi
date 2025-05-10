@@ -6,75 +6,107 @@ import { ethers } from 'ethers';
 import { logger } from './utils/logger.js';
 import ServiceContainer from './services/ServiceContainer.js';
 import ArbitrageDetector from './core/ArbitrageDetector.js';
-import UniswapDex from './exchanges/UniswapDex.js';
-import SushiswapDex from './exchanges/SushiSwap.js';
+import UniswapV2 from './exchanges/UniswapV2.js';
+import SushiSwap from './exchanges/SushiSwap.js';
 import PancakeSwapDex from './exchanges/PancakeSwapDex.js';
+import CurveDex from './exchanges/CurveDex.js';
+import BalancerDex from './exchanges/BalancerDex.js';
+import dYdXDex from './exchanges/dYdXDex.js';
+import OneInchDex from './exchanges/OneInchDex.js';
 import RPCProvider from './services/RPCProvider.js';
 import TokenManager from './services/utils/TokenManager.js';
 import RouteAggregator from './services/RouteAggregator.js';
+import ConfigService from './services/ConfigService.js';
+import KyberSwapDex from './exchanges/KyberSwapDex.js';
+import TraderJoeDex from './exchanges/TraderJoeDex.js';
+import GMXDex from './exchanges/GMXDex.js';
 
 // Load environment variables
 dotenv.config();
 
 class ArbitrageApp {
   constructor() {
-    this.container = new ServiceContainer();
+    this.config = null;
+    this.rpcProvider = null;
+    this.tokenManager = null;
+    this.routeAggregator = null;
+    this.arbitrageDetector = null;
+    this.scanInterval = null;
     this.isInitialized = false;
-    this.isRunning = false;
   }
 
   async initialize() {
-    if (this.isInitialized) {
-      logger.info('Application already initialized');
-      return;
-    }
-
     try {
-      // Initialize RPC provider
-      const rpcProvider = new RPCProvider({
+      if (this.isInitialized) {
+        logger.info('Application already initialized');
+        return;
+      }
+
+      // Initialize config service
+      this.config = new ConfigService();
+      await this.config.load();
+
+      // Initialize a single RPCProvider for all networks
+      this.rpcProvider = new RPCProvider({
         ethereum: {
-          primary: process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com',
-          fallback: process.env.ETHEREUM_FALLBACK_RPC_URL || 'https://rpc.ankr.com/eth'
+          primary: this.config.get('ETH_RPC_URL'),
+          fallback: this.config.get('ETH_FALLBACK_RPC_URL'),
+          timeout: 30000,
+          pollingInterval: 4000
         },
         arbitrum: {
-          primary: process.env.ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc',
-          fallback: process.env.ARBITRUM_FALLBACK_RPC_URL || 'https://rpc.ankr.com/arbitrum'
+          primary: this.config.get('ARBITRUM_RPC_URL'),
+          fallback: this.config.get('ARBITRUM_FALLBACK_RPC_URL'),
+          timeout: 30000,
+          pollingInterval: 4000
+        },
+        bsc: {
+          primary: this.config.get('BSC_RPC_URL'),
+          fallback: this.config.get('BSC_FALLBACK_RPC_URL'),
+          timeout: 30000,
+          pollingInterval: 4000
         }
       });
-      await rpcProvider.initialize();
-      this.container.services.set('rpcProvider', rpcProvider);
+      await this.rpcProvider.initialize();
 
-      // Initialize token manager
-      const tokenManager = new TokenManager(rpcProvider);
-      await tokenManager.initialize();
-      this.container.services.set('tokenManager', tokenManager);
-
-      // Initialize aggregator service
-      const routeAggregator = new RouteAggregator(rpcProvider);
-      await routeAggregator.initialize();
-      this.container.services.set('routeAggregator', routeAggregator);
-
-      // Initialize DEXes
+      // Initialize DEXes with ethers providers
       const dexes = [
-        new UniswapDex(rpcProvider),
-        new SushiswapDex(rpcProvider),
-        new PancakeSwapDex(rpcProvider)
+        new UniswapV2(this.rpcProvider.getProvider('ethereum')),
+        new SushiSwap(this.rpcProvider.getProvider('ethereum')),
+        new PancakeSwapDex(this.rpcProvider.getProvider('bsc')),
+        new CurveDex(this.rpcProvider.getProvider('ethereum')),
+        new BalancerDex(this.rpcProvider.getProvider('ethereum')),
+        new dYdXDex(this.rpcProvider.getProvider('ethereum')),
+        new OneInchDex(this.rpcProvider.getProvider('ethereum')),
+        new KyberSwapDex(this.rpcProvider.getProvider('ethereum')),
+        new TraderJoeDex(this.rpcProvider.getProvider('arbitrum')),
+        new GMXDex(this.rpcProvider.getProvider('arbitrum'))
       ];
-      this.container.services.set('dexes', dexes);
+
+      // Initialize token manager with DEXes
+      this.tokenManager = new TokenManager();
+      for (const dex of dexes) {
+        this.tokenManager.addDex(dex);
+      }
+
+      // Fetch pairs from all DEXes
+      await this.tokenManager.fetchPairs();
+
+      // Initialize route aggregator
+      this.routeAggregator = new RouteAggregator(this.rpcProvider.getProvider('ethereum'));
 
       // Initialize arbitrage detector
-      const detector = new ArbitrageDetector(
-        this.container.get('routeAggregator'),
-        this.container.get('tokenManager')
+      this.arbitrageDetector = new ArbitrageDetector(
+        this.routeAggregator,
+        this.tokenManager
       );
-      this.container.services.set('detector', detector);
+
+      // Handle shutdown signals
+      process.on('SIGINT', () => this.shutdown());
+      process.on('SIGTERM', () => this.shutdown());
 
       this.isInitialized = true;
       logger.info('Application initialized successfully');
-
-      // Handle shutdown signals
-      process.on('SIGTERM', () => this.shutdown());
-      process.on('SIGINT', () => this.shutdown());
     } catch (error) {
       logger.error('Failed to initialize application:', error);
       throw error;
@@ -82,76 +114,82 @@ class ArbitrageApp {
   }
 
   async start() {
-    if (!this.isInitialized) {
-      await this.initialize();
-    }
-
-    if (this.isRunning) {
-      logger.info('Application already running');
-      return;
-    }
-
     try {
-      const detector = this.container.get('detector');
-      const dexes = this.container.get('dexes');
-
-      // Example token addresses (WETH and USDT)
-      const WETH = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
-      const USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
-      const amount = ethers.utils.parseEther('1.0'); // 1 ETH
-
-      // Find arbitrage opportunities
-      const opportunities = await detector.analyzeTokenPair(WETH, USDT, amount, dexes);
+      logger.info('Starting application...');
       
-      if (opportunities) {
-        logger.info('Found arbitrage opportunity:', {
-          buyDex: opportunities.buyDex,
-          sellDex: opportunities.sellDex,
-          profit: ethers.utils.formatEther(opportunities.profit),
-          profitPercentage: opportunities.profitPercentage
-        });
-      } else {
-        logger.info('No arbitrage opportunities found');
+      // Ensure initialization is complete
+      if (!this.isInitialized) {
+        await this.initialize();
       }
 
-      this.isRunning = true;
-      logger.info('Application started successfully');
+      // Start continuous scanning
+      this.scanInterval = setInterval(async () => {
+        try {
+          if (!this.arbitrageDetector) {
+            logger.error('Arbitrage detector not initialized');
+            return;
+          }
+
+          const opportunities = await this.arbitrageDetector.findArbitrageOpportunities();
+          
+          if (opportunities.length > 0) {
+            logger.info(`Found ${opportunities.length} arbitrage opportunities:`);
+            opportunities.forEach(opp => {
+              logger.info(`Profit: ${opp.profitPercentage}%`);
+              logger.info(`Buy: ${opp.buyExchange} at ${opp.buyPrice}`);
+              logger.info(`Sell: ${opp.sellExchange} at ${opp.sellPrice}`);
+              logger.info('---');
+            });
+          }
+        } catch (error) {
+          logger.error('Error during arbitrage scan:', error);
+        }
+      }, 30000); // Scan every 30 seconds
+
+      logger.info('Arbitrage detection started');
     } catch (error) {
       logger.error('Failed to start application:', error);
       throw error;
     }
   }
 
-  async shutdown() {
-    logger.info('Shutting down application...');
+  async addTokens(tokenAddresses) {
     try {
-      await this.container.cleanup();
-      this.isRunning = false;
-      this.isInitialized = false;
-      logger.info('Application shutdown complete');
+      if (!this.tokenManager) {
+        throw new Error('Token manager not initialized');
+      }
+
+      for (const address of tokenAddresses) {
+        await this.tokenManager.loadToken(address);
+      }
+      logger.info(`Added ${tokenAddresses.length} tokens`);
+    } catch (error) {
+      logger.error('Error adding tokens:', error);
+      throw error;
+    }
+  }
+
+  async shutdown() {
+    try {
+      if (this.scanInterval) {
+        clearInterval(this.scanInterval);
+      }
+
+      // Clean up resources
+      await this.rpcProvider.destroy();
+
+      logger.info('Application shut down successfully');
       process.exit(0);
     } catch (error) {
       logger.error('Error during shutdown:', error);
       process.exit(1);
     }
   }
-
-  getStatus() {
-    return {
-      isRunning: this.isRunning,
-      initialized: this.isInitialized,
-      services: Array.from(this.container.services.keys()),
-      metrics: this.container.get('monitoring')?.getMetrics() || {}
-    };
-  }
 }
 
-// Create and export the app instance
+// Create and start the application
 const app = new ArbitrageApp();
-export default app;
-
-// Start the application
 app.start().catch(error => {
-  logger.error('Failed to start application:', error);
+  logger.error('Fatal error:', error);
   process.exit(1);
-}); 
+});
