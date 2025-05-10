@@ -1,190 +1,78 @@
 import { ethers } from 'ethers';
 import { logger } from '../utils/logger.js';
 
+const RPC_ENDPOINTS = [
+  'https://eth.llamarpc.com',
+  'https://rpc.ankr.com/eth',
+  'https://ethereum.publicnode.com',
+  'https://eth-mainnet.public.blastapi.io'
+];
+
 class RPCProvider {
-  constructor(config = {}) {
-    this.config = {
-      ethereum: {
-        primary: 'https://eth.llamarpc.com',
-        fallback: 'https://rpc.ankr.com/eth',
-        timeout: 30000,
-        pollingInterval: 4000
-      },
-      arbitrum: {
-        primary: 'https://arb1.arbitrum.io/rpc',
-        fallback: 'https://rpc.ankr.com/arbitrum',
-        timeout: 30000,
-        pollingInterval: 4000
-      },
-      bsc: {
-        primary: 'https://bsc-dataseed.binance.org/',
-        fallback: 'https://rpc.ankr.com/bsc',
-        timeout: 30000,
-        pollingInterval: 4000
-      }
-    };
-
-    // Only override known networks
-    for (const net of ['ethereum', 'arbitrum', 'bsc']) {
-      if (config[net]) {
-        this.config[net] = { ...this.config[net], ...config[net] };
-      }
-    }
-
-    // Debug: Print config at construction
-    console.log('RPCProvider constructor config:', this.config);
-
-    this.providers = new Map();
-    this.activeProviders = new Map();
-    this.healthChecks = new Map();
+  constructor() {
+    this.providers = RPC_ENDPOINTS.map(endpoint => 
+      new ethers.providers.JsonRpcProvider(endpoint)
+    );
+    this.currentProviderIndex = 0;
+    this.maxRetries = 3;
+    this.retryDelay = 1000; // Base delay in ms
   }
 
-  async initialize() {
+  getProvider() {
+    return this.providers[this.currentProviderIndex];
+  }
+
+  async rotateProvider() {
+    this.currentProviderIndex = (this.currentProviderIndex + 1) % this.providers.length;
+    logger.info(`Rotating to provider: ${RPC_ENDPOINTS[this.currentProviderIndex]}`);
+  }
+
+  async executeWithRetry(operation, retryCount = 0) {
     try {
-      // Debug: Print the full config object
-      logger.info('RPCProvider config object:', JSON.stringify(this.config, null, 2));
-      // Initialize all networks present in config
-      for (const network of Object.keys(this.config)) {
-        await this.initializeProvider(network);
-      }
-      // Debug: Print the activeProviders map keys
-      logger.info('Active providers after initialization:', Array.from(this.activeProviders.keys()));
-      logger.info('RPC providers initialized successfully');
+      return await operation(this.getProvider());
     } catch (error) {
-      logger.error('Failed to initialize RPC providers:', error);
+      if (retryCount >= this.maxRetries) {
+        throw error;
+      }
+
+      const isConnectionError = error.code === 'SERVER_ERROR' || 
+                              error.code === 'NETWORK_ERROR' ||
+                              error.message.includes('ECONNRESET');
+
+      if (isConnectionError) {
+        logger.warn(`RPC call failed (attempt ${retryCount + 1}/${this.maxRetries}): ${error.message}`);
+        await this.rotateProvider();
+        
+        // Exponential backoff
+        const delay = this.retryDelay * Math.pow(2, retryCount);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        return this.executeWithRetry(operation, retryCount + 1);
+      }
+
       throw error;
     }
   }
 
-  async initializeProvider(network) {
-    const networkConfig = this.config[network];
-    if (!networkConfig) {
-      throw new Error(`No configuration found for network: ${network}`);
-    }
-
-    try {
-      // Initialize primary provider
-      const primaryProvider = new ethers.providers.JsonRpcProvider(networkConfig.primary);
-      primaryProvider.timeout = networkConfig.timeout;
-      if (Number.isInteger(networkConfig.pollingInterval) && networkConfig.pollingInterval > 0) {
-        primaryProvider.pollingInterval = networkConfig.pollingInterval;
-      } else {
-        primaryProvider.pollingInterval = 4000;
-      }
-
-      // Initialize fallback provider
-      const fallbackProvider = new ethers.providers.JsonRpcProvider(networkConfig.fallback);
-      fallbackProvider.timeout = networkConfig.timeout;
-      if (Number.isInteger(networkConfig.pollingInterval) && networkConfig.pollingInterval > 0) {
-        fallbackProvider.pollingInterval = networkConfig.pollingInterval;
-      } else {
-        fallbackProvider.pollingInterval = 4000;
-      }
-
-      // Store providers
-      this.providers.set(network, {
-        primary: primaryProvider,
-        fallback: fallbackProvider
-      });
-
-      // Set primary as active initially
-      this.activeProviders.set(network, primaryProvider);
-
-      // Start health check
-      this.startHealthCheck(network);
-
-      logger.info(`Initialized ${network} provider with primary: ${networkConfig.primary}`);
-    } catch (error) {
-      logger.error(`Failed to initialize ${network} provider:`, error);
-      throw error;
-    }
+  async getGasPrice() {
+    return this.executeWithRetry(provider => provider.getGasPrice());
   }
 
-  async startHealthCheck(network) {
-    const checkHealth = async () => {
-      try {
-        const provider = this.activeProviders.get(network);
-        if (!provider) return;
-
-        const blockNumber = await provider.getBlockNumber();
-        if (blockNumber) {
-          this.healthChecks.set(network, {
-            lastCheck: Date.now(),
-            isHealthy: true,
-            blockNumber
-          });
-        }
-      } catch (error) {
-        logger.warn(`${network} provider health check failed:`, error.message);
-        this.healthChecks.set(network, {
-          lastCheck: Date.now(),
-          isHealthy: false,
-          error: error.message
-        });
-
-        // Try to switch to fallback provider
-        await this.switchProvider(network);
-      }
-    };
-
-    // Run health check every 30 seconds
-    setInterval(checkHealth, 30000);
-    await checkHealth(); // Initial check
+  async getBalance(address) {
+    return this.executeWithRetry(provider => provider.getBalance(address));
   }
 
-  async switchProvider(network) {
-    const providers = this.providers.get(network);
-    if (!providers) return;
-
-    const currentProvider = this.activeProviders.get(network);
-    const newProvider = currentProvider === providers.primary ? providers.fallback : providers.primary;
-
-    try {
-      // Test the new provider
-      await newProvider.getBlockNumber();
-      
-      // Switch to new provider
-      this.activeProviders.set(network, newProvider);
-      logger.info(`Switched ${network} provider to: ${newProvider.connection.url}`);
-    } catch (error) {
-      logger.error(`Failed to switch ${network} provider:`, error);
-    }
+  async getNetwork() {
+    return this.executeWithRetry(provider => provider.getNetwork());
   }
 
-  getProvider(network = 'ethereum') {
-    const provider = this.activeProviders.get(network);
-    if (!provider) {
-      throw new Error(`No provider available for network: ${network}`);
-    }
-    return provider;
+  async getBlockNumber() {
+    return this.executeWithRetry(provider => provider.getBlockNumber());
   }
 
-  async getGasPrice(network = 'ethereum') {
-    const provider = this.getProvider(network);
-    try {
-      return await provider.getGasPrice();
-    } catch (error) {
-      logger.error(`Failed to get gas price for ${network}:`, error);
-      throw error;
-    }
-  }
-
-  async getBalance(address, network = 'ethereum') {
-    const provider = this.getProvider(network);
-    try {
-      return await provider.getBalance(address);
-    } catch (error) {
-      logger.error(`Failed to get balance for ${address} on ${network}:`, error);
-      throw error;
-    }
-  }
-
-  cleanup() {
-    // Clear all intervals and providers
-    this.providers.clear();
-    this.activeProviders.clear();
-    this.healthChecks.clear();
+  async call(transaction) {
+    return this.executeWithRetry(provider => provider.call(transaction));
   }
 }
 
-export default RPCProvider; 
+export default new RPCProvider(); 
