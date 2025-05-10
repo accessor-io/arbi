@@ -1,5 +1,5 @@
 # Arbitrage Trading System
-
+# Work in Progress
 A modular and configurable system for cryptocurrency arbitrage trading.
 
 ## Project Structure
