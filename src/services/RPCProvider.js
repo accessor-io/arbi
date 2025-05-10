@@ -268,4 +268,4 @@ class RPCProvider {
   }
 }
 
-export default new RPCProvider(); 
+export default RPCProvider; 
