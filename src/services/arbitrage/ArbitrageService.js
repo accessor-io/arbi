@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { logger } from '../../utils/logger.js';
 import { providers } from '../../config/network.js';
 import Uniswap from '../../exchanges/Uniswap.js';
-import Sushiswap from '../../exchanges/Sushiswap.js';
+import Sushiswap from '../../exchanges/SushiSwap.js';
 import TokenManager from '../utils/TokenManager.js';
 import ArbitrageDetector from '../../core/ArbitrageDetector.js';
 import ArbitrageExecutor from '../../core/ArbitrageExecutor.js';

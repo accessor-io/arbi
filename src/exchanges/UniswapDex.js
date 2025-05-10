@@ -1,4 +1,4 @@
-import BaseDex from './BaseDex';
+import BaseDex from './BaseDex.js';
 import { ethers } from 'ethers';
 
 class UniswapDex extends BaseDex {

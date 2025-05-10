@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import BaseDex from '../exchanges/BaseDex.js';
 import UniswapV2 from '../exchanges/UniswapV2.js';
-import SushiSwap from '../exchanges/Sushiswap.js';
+import SushiSwap from '../exchanges/SushiSwap.js';
 
 class DexAggregator {
   constructor(provider, config = {}) {

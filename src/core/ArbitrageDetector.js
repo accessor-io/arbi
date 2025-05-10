@@ -2,8 +2,10 @@ import { ethers } from 'ethers'; // Use ES6 import
 import { logger } from '../utils/logger.js';
 import { BigNumber } from 'ethers';
 import { ERRORS, DEFAULTS } from '../constants/index.js';
-import { PriceQuote, ArbitrageOpportunity } from '../types/index.js';
+import * as Types from '../types/index.js';
 import IService from '../interfaces/IService.js';
+
+const { PriceQuote, ArbitrageOpportunity } = Types;
 
 /**
  * Detects arbitrage opportunities by comparing prices from an aggregated source.

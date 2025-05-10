@@ -1,6 +1,6 @@
 import { providers } from '../config/network.js';
 import Uniswap from '../exchanges/Uniswap.js';
-import Sushiswap from '../exchanges/Sushiswap.js';
+import Sushiswap from '../exchanges/SushiSwap.js';
 import TokenManager from '../services/utils/TokenManager.js';
 import ArbitrageDetector from './ArbitrageDetector.js';
 import ArbitrageExecutor from './ArbitrageExecutor.js';

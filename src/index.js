@@ -7,11 +7,11 @@ import { logger } from './utils/logger.js';
 import ServiceContainer from './services/ServiceContainer.js';
 import ArbitrageDetector from './core/ArbitrageDetector.js';
 import UniswapDex from './exchanges/UniswapDex.js';
-import SushiswapDex from './exchanges/SushiswapDex.js';
+import SushiswapDex from './exchanges/SushiSwap.js';
 import PancakeSwapDex from './exchanges/PancakeSwapDex.js';
 import RPCProvider from './services/RPCProvider.js';
-import TokenManager from './services/TokenManager.js';
-import AggregatorService from './services/AggregatorService.js';
+import TokenManager from './services/utils/TokenManager.js';
+import RouteAggregator from './services/RouteAggregator.js';
 
 // Load environment variables
 dotenv.config();
@@ -50,9 +50,9 @@ class ArbitrageApp {
       this.container.services.set('tokenManager', tokenManager);
 
       // Initialize aggregator service
-      const aggregatorService = new AggregatorService(rpcProvider);
-      await aggregatorService.initialize();
-      this.container.services.set('aggregatorService', aggregatorService);
+      const routeAggregator = new RouteAggregator(rpcProvider);
+      await routeAggregator.initialize();
+      this.container.services.set('routeAggregator', routeAggregator);
 
       // Initialize DEXes
       const dexes = [
@@ -64,7 +64,7 @@ class ArbitrageApp {
 
       // Initialize arbitrage detector
       const detector = new ArbitrageDetector(
-        this.container.get('aggregatorService'),
+        this.container.get('routeAggregator'),
         this.container.get('tokenManager')
       );
       this.container.services.set('detector', detector);

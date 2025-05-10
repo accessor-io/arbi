@@ -2,63 +2,63 @@
  * Type definitions for the application
  */
 
-/**
- * @typedef {Object} TokenInfo
- * @property {string} address - Token contract address
- * @property {string} symbol - Token symbol
- * @property {number} decimals - Token decimals
- * @property {string} name - Token name
- */
+// Define the types as actual objects
+const TokenInfo = {
+  address: '',
+  symbol: '',
+  decimals: 0,
+  name: ''
+};
 
-/**
- * @typedef {Object} PriceQuote
- * @property {string} dex - DEX identifier
- * @property {string} tokenIn - Input token address
- * @property {string} tokenOut - Output token address
- * @property {string} amountIn - Input amount in wei
- * @property {string} amountOut - Output amount in wei
- * @property {string} price - Price in wei
- * @property {number} priceImpact - Price impact percentage
- */
+const PriceQuote = {
+  dex: '',
+  tokenIn: '',
+  tokenOut: '',
+  amountIn: '',
+  amountOut: '',
+  price: '',
+  priceImpact: 0
+};
 
-/**
- * @typedef {Object} ArbitrageOpportunity
- * @property {string} buyDex - DEX to buy from
- * @property {string} sellDex - DEX to sell to
- * @property {string} tokenIn - Input token address
- * @property {string} tokenOut - Output token address
- * @property {string} amountIn - Input amount in wei
- * @property {string} amountOut - Output amount in wei
- * @property {string} profit - Profit in wei
- * @property {number} profitPercentage - Profit percentage
- * @property {string} gasEstimate - Estimated gas cost in wei
- */
+const ArbitrageOpportunity = {
+  buyDex: '',
+  sellDex: '',
+  tokenIn: '',
+  tokenOut: '',
+  amountIn: '',
+  amountOut: '',
+  profit: '',
+  profitPercentage: 0,
+  gasEstimate: ''
+};
 
-/**
- * @typedef {Object} TradeResult
- * @property {string} txHash - Transaction hash
- * @property {string} status - Transaction status
- * @property {string} amountIn - Input amount in wei
- * @property {string} amountOut - Output amount in wei
- * @property {string} gasUsed - Gas used in wei
- * @property {string} gasPrice - Gas price in wei
- * @property {string} profit - Profit in wei
- * @property {number} profitPercentage - Profit percentage
- */
+const TradeResult = {
+  txHash: '',
+  status: '',
+  amountIn: '',
+  amountOut: '',
+  gasUsed: '',
+  gasPrice: '',
+  profit: '',
+  profitPercentage: 0
+};
 
-/**
- * @typedef {Object} ServiceStatus
- * @property {boolean} isRunning - Whether the service is running
- * @property {boolean} isInitialized - Whether the service is initialized
- * @property {Object} metrics - Service metrics
- * @property {string} lastError - Last error message
- * @property {Date} lastUpdate - Last update timestamp
- */
+const ServiceStatus = {
+  isRunning: false,
+  isInitialized: false,
+  metrics: {},
+  lastError: '',
+  lastUpdate: new Date()
+};
 
+// Export the types
+export { TokenInfo, PriceQuote, ArbitrageOpportunity, TradeResult, ServiceStatus };
+
+// Also export as default for backward compatibility
 export default {
-  TokenInfo: {},
-  PriceQuote: {},
-  ArbitrageOpportunity: {},
-  TradeResult: {},
-  ServiceStatus: {}
+  TokenInfo,
+  PriceQuote,
+  ArbitrageOpportunity,
+  TradeResult,
+  ServiceStatus
 }; 
