@@ -10,14 +10,18 @@ const RPC_ENDPOINTS = [
 
 class RPCProvider {
   constructor() {
-    this.providers = RPC_ENDPOINTS.map(endpoint => 
-      new ethers.providers.JsonRpcProvider(endpoint)
-    );
+    this.providers = RPC_ENDPOINTS.map(endpoint => {
+      const provider = new ethers.providers.JsonRpcProvider(endpoint);
+      provider.timeout = 30000; // 30 second timeout
+      return provider;
+    });
     this.currentProviderIndex = 0;
     this.maxRetries = 3;
     this.retryDelay = 1000; // Base delay in ms
     this.providerStats = new Map();
     this.healthCheckInterval = 30000; // 30 seconds
+    this.requestQueue = new Map(); // Track requests per provider
+    this.maxConcurrentRequests = 10; // Maximum concurrent requests per provider
     this.initializeProviderStats();
     this.startHealthChecks();
   }
@@ -28,7 +32,9 @@ class RPCProvider {
         latency: [],
         failures: 0,
         lastCheck: Date.now(),
-        isHealthy: true
+        isHealthy: true,
+        requestCount: 0,
+        lastRequestTime: Date.now()
       });
     });
   }
@@ -49,7 +55,7 @@ class RPCProvider {
         const latency = Date.now() - startTime;
         
         stats.latency.push(latency);
-        if (stats.latency.length > 10) stats.latency.shift(); // Keep last 10 measurements
+        if (stats.latency.length > 10) stats.latency.shift();
         
         stats.isHealthy = true;
         stats.failures = 0;
@@ -100,14 +106,40 @@ class RPCProvider {
     logger.info(`Rotating to provider: ${RPC_ENDPOINTS[this.currentProviderIndex]}`);
   }
 
+  async waitForRateLimit(endpoint) {
+    const stats = this.providerStats.get(endpoint);
+    const now = Date.now();
+    
+    // Reset request count if more than 1 second has passed
+    if (now - stats.lastRequestTime > 1000) {
+      stats.requestCount = 0;
+    }
+    
+    // If we've hit the rate limit, wait
+    if (stats.requestCount >= this.maxConcurrentRequests) {
+      const waitTime = 1000 - (now - stats.lastRequestTime);
+      if (waitTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        stats.requestCount = 0;
+      }
+    }
+    
+    stats.requestCount++;
+    stats.lastRequestTime = now;
+  }
+
   async executeWithRetry(operation, retryCount = 0) {
+    const endpoint = RPC_ENDPOINTS[this.currentProviderIndex];
+    
     try {
+      await this.waitForRateLimit(endpoint);
+      
       const startTime = Date.now();
       const result = await operation(this.getProvider());
       const latency = Date.now() - startTime;
       
       // Update latency stats
-      const stats = this.providerStats.get(RPC_ENDPOINTS[this.currentProviderIndex]);
+      const stats = this.providerStats.get(endpoint);
       stats.latency.push(latency);
       if (stats.latency.length > 10) stats.latency.shift();
       
@@ -119,16 +151,28 @@ class RPCProvider {
 
       const isConnectionError = error.code === 'SERVER_ERROR' || 
                               error.code === 'NETWORK_ERROR' ||
-                              error.message.includes('ECONNRESET');
+                              error.message.includes('ECONNRESET') ||
+                              error.code === 'TIMEOUT';
 
       if (isConnectionError) {
         logger.warn(`RPC call failed (attempt ${retryCount + 1}/${this.maxRetries}): ${error.message}`);
         await this.rotateProvider();
         
-        // Exponential backoff
-        const delay = this.retryDelay * Math.pow(2, retryCount);
+        // Exponential backoff with jitter
+        const baseDelay = this.retryDelay * Math.pow(2, retryCount);
+        const jitter = Math.random() * 1000;
+        const delay = baseDelay + jitter;
+        
         await new Promise(resolve => setTimeout(resolve, delay));
         
+        return this.executeWithRetry(operation, retryCount + 1);
+      }
+
+      // Handle contract-specific errors
+      if (error.code === 'CALL_EXCEPTION') {
+        logger.warn(`Contract call failed: ${error.message}`);
+        // For contract calls, we might want to retry with a different provider
+        await this.rotateProvider();
         return this.executeWithRetry(operation, retryCount + 1);
       }
 
