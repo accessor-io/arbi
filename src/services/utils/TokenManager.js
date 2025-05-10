@@ -178,6 +178,13 @@ class TokenManager {
     }
 
     try {
+      // Provider health check
+      try {
+        await this.provider.getNetwork();
+      } catch (err) {
+        logger.error('Provider not ready or network not detected:', err);
+        throw new Error('Provider not ready or network not detected');
+      }
       const contract = new ethers.Contract(address, ERC20_ABI, this.provider);
       
       // Use a longer timeout for token loading
@@ -254,6 +261,13 @@ class TokenManager {
 
   async getTokenBalance(tokenAddress, walletAddress) {
     try {
+      // Provider health check
+      try {
+        await this.provider.getNetwork();
+      } catch (err) {
+        logger.error('Provider not ready or network not detected:', err);
+        throw new Error('Provider not ready or network not detected');
+      }
       const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
       const balance = await contract.balanceOf(walletAddress);
       return balance;
@@ -265,6 +279,13 @@ class TokenManager {
 
   async checkAllowance(tokenAddress, walletAddress, spenderAddress) {
     try {
+      // Provider health check
+      try {
+        await this.provider.getNetwork();
+      } catch (err) {
+        logger.error('Provider not ready or network not detected:', err);
+        throw new Error('Provider not ready or network not detected');
+      }
       const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
       const allowance = await contract.allowance(walletAddress, spenderAddress);
       return allowance;
