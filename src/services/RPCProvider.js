@@ -22,6 +22,9 @@ class RPCProvider {
     this.healthCheckInterval = 30000; // 30 seconds
     this.requestQueue = new Map(); // Track requests per provider
     this.maxConcurrentRequests = 10; // Maximum concurrent requests per provider
+    this.circuitBreaker = new Map(); // Circuit breaker state per provider
+    this.requestBatches = new Map(); // Batch requests per provider
+    this.batchTimeout = 100; // ms to wait for batching
     this.initializeProviderStats();
     this.startHealthChecks();
   }
@@ -34,8 +37,17 @@ class RPCProvider {
         lastCheck: Date.now(),
         isHealthy: true,
         requestCount: 0,
-        lastRequestTime: Date.now()
+        lastRequestTime: Date.now(),
+        errorCount: 0,
+        lastErrorTime: Date.now()
       });
+      this.circuitBreaker.set(endpoint, {
+        isOpen: false,
+        failureCount: 0,
+        lastFailureTime: Date.now(),
+        halfOpenTime: null
+      });
+      this.requestBatches.set(endpoint, []);
     });
   }
 
@@ -48,6 +60,7 @@ class RPCProvider {
     const checks = this.providers.map(async (provider, index) => {
       const endpoint = RPC_ENDPOINTS[index];
       const stats = this.providerStats.get(endpoint);
+      const circuit = this.circuitBreaker.get(endpoint);
       
       try {
         const startTime = Date.now();
@@ -61,11 +74,29 @@ class RPCProvider {
         stats.failures = 0;
         stats.lastCheck = Date.now();
         
+        // Reset circuit breaker on successful health check
+        if (circuit.isOpen) {
+          circuit.isOpen = false;
+          circuit.failureCount = 0;
+          circuit.halfOpenTime = null;
+        }
+        
         logger.debug(`Provider ${endpoint} health check passed. Latency: ${latency}ms`);
       } catch (error) {
         stats.failures++;
         stats.isHealthy = false;
         stats.lastCheck = Date.now();
+        stats.errorCount++;
+        stats.lastErrorTime = Date.now();
+        
+        // Update circuit breaker
+        circuit.failureCount++;
+        if (circuit.failureCount >= 5) {
+          circuit.isOpen = true;
+          circuit.lastFailureTime = Date.now();
+          circuit.halfOpenTime = Date.now() + 30000; // 30s cooldown
+        }
+        
         logger.warn(`Provider ${endpoint} health check failed: ${error.message}`);
       }
     });
@@ -130,7 +161,19 @@ class RPCProvider {
 
   async executeWithRetry(operation, retryCount = 0) {
     const endpoint = RPC_ENDPOINTS[this.currentProviderIndex];
+    const circuit = this.circuitBreaker.get(endpoint);
     
+    // Check circuit breaker
+    if (circuit.isOpen) {
+      if (Date.now() >= circuit.halfOpenTime) {
+        circuit.isOpen = false;
+        circuit.failureCount = 0;
+      } else {
+        await this.rotateProvider();
+        return this.executeWithRetry(operation, retryCount);
+      }
+    }
+
     try {
       await this.waitForRateLimit(endpoint);
       
@@ -143,11 +186,18 @@ class RPCProvider {
       stats.latency.push(latency);
       if (stats.latency.length > 10) stats.latency.shift();
       
+      // Reset error count on success
+      stats.errorCount = 0;
+      
       return result;
     } catch (error) {
       if (retryCount >= this.maxRetries) {
         throw error;
       }
+
+      const stats = this.providerStats.get(endpoint);
+      stats.errorCount++;
+      stats.lastErrorTime = Date.now();
 
       const isConnectionError = error.code === 'SERVER_ERROR' || 
                               error.code === 'NETWORK_ERROR' ||
@@ -156,6 +206,15 @@ class RPCProvider {
 
       if (isConnectionError) {
         logger.warn(`RPC call failed (attempt ${retryCount + 1}/${this.maxRetries}): ${error.message}`);
+        
+        // Update circuit breaker
+        circuit.failureCount++;
+        if (circuit.failureCount >= 5) {
+          circuit.isOpen = true;
+          circuit.lastFailureTime = Date.now();
+          circuit.halfOpenTime = Date.now() + 30000;
+        }
+        
         await this.rotateProvider();
         
         // Exponential backoff with jitter
@@ -171,9 +230,13 @@ class RPCProvider {
       // Handle contract-specific errors
       if (error.code === 'CALL_EXCEPTION') {
         logger.warn(`Contract call failed: ${error.message}`);
+        
         // For contract calls, we might want to retry with a different provider
-        await this.rotateProvider();
-        return this.executeWithRetry(operation, retryCount + 1);
+        // but only if it's not a revert with data
+        if (!error.data || error.data === '0x') {
+          await this.rotateProvider();
+          return this.executeWithRetry(operation, retryCount + 1);
+        }
       }
 
       throw error;
