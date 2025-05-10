@@ -1,5 +1,6 @@
 import BaseDex from './BaseDex.js';
 import { ethers } from 'ethers';
+const logger = require('../../utils/logger');
 
 class Sushiswap extends BaseDex {
   constructor(provider, config = {}) {
@@ -150,6 +151,7 @@ class Sushiswap extends BaseDex {
   }
 
   async getPairs() {
+    logger.info('Starting to fetch pairs from SushiSwap...');
     try {
       const factory = new ethers.Contract(
         this.config.factoryAddress,
@@ -201,9 +203,13 @@ class Sushiswap extends BaseDex {
           console.debug(`Error fetching pair ${i} from ${this.name}:`, error.message);
           continue;
         }
+        if (i % 10 === 0 || i === endIndex - 1) {
+          logger.info(`Fetching pairs from SushiSwap... (${i + 1}/${endIndex})`);
+        }
       }
 
       console.info(`[${this.name}] Fetched ${pairs.length} pairs`);
+      logger.info('Finished fetching pairs from SushiSwap.');
       return pairs;
     } catch (error) {
       console.error(`Error fetching pairs from ${this.name}:`, error);

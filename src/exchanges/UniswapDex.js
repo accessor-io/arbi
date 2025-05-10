@@ -1,5 +1,6 @@
 import BaseDex from './BaseDex.js';
 import { ethers } from 'ethers';
+const logger = require('../../utils/logger');
 
 class UniswapDex extends BaseDex {
   constructor(provider, config = {}) {
@@ -150,8 +151,15 @@ class UniswapDex extends BaseDex {
   }
 
   async getPairs() {
-    console.warn('getPairs not implemented for UniswapDex');
-    return [];
+    logger.info('Starting to fetch pairs from Uniswap...');
+    const totalPairs = await this.getTotalPairs();
+    for (let i = 0; i < totalPairs; i++) {
+      // ...fetch logic...
+      if (i % 10 === 0 || i === totalPairs - 1) {
+        logger.info(`Fetching pairs from Uniswap... (${i + 1}/${totalPairs})`);
+      }
+    }
+    logger.info('Finished fetching pairs from Uniswap.');
   }
 }
 

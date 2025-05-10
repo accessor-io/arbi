@@ -1,7 +1,7 @@
 /**
  * Logger Utility
  */
-import winston from 'winston';
+import { createLogger, format, transports } from 'winston';
 import 'winston-daily-rotate-file';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,7 +20,6 @@ try {
   }
 }
 
-const { format, transports } = winston;
 const { combine, timestamp, printf, colorize, errors } = format;
 
 // Custom format for log messages
@@ -32,7 +31,7 @@ const logFormat = printf(({ level, message, timestamp, stack }) => {
 });
 
 // Create the logger instance
-const logger = winston.createLogger({
+const logger = createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: combine(
     errors({ stack: true }),

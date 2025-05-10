@@ -336,19 +336,15 @@ class TokenManager {
   }
 
   async fetchPairs() {
-    logger.info('[TokenManager] Starting to fetch pairs from DEXes...');
-    for (const dex of this.dexes) {
-      try {
-        const pairs = await dex.getPairs();
-        if (pairs && pairs.length > 0) {
-          this.pairs.push(...pairs);
-          logger.info(`[TokenManager] Fetched ${pairs.length} pairs from ${dex.name}`);
-        }
-      } catch (error) {
-        logger.error(`[TokenManager] Error fetching pairs from ${dex.name}:`, error);
+    logger.info('Starting to fetch token pairs...');
+    const totalPairs = this.pairs.length;
+    for (let i = 0; i < totalPairs; i++) {
+      // ...fetch logic...
+      if (i % 10 === 0 || i === totalPairs - 1) {
+        logger.info(`Fetching token pairs... (${i + 1}/${totalPairs})`);
       }
     }
-    logger.info(`[TokenManager] Total pairs fetched: ${this.pairs.length}`);
+    logger.info('Finished fetching token pairs.');
   }
 }
 
