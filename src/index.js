@@ -67,7 +67,6 @@ class ArbitrageApp {
           pollingInterval: 4000
         }
       });
-      await this.rpcProvider.initialize();
 
       // Initialize DEXes with ethers providers
       const dexes = [
